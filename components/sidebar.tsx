@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Jobs", href: "/jobs", icon: Briefcase },
   { label: "Applications", href: "/applications", icon: Users },
   { label: "Pipeline", href: "/pipeline", icon: Kanban },
+  { label: "Analytics", href: "/analytics", icon: BarChart2 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
