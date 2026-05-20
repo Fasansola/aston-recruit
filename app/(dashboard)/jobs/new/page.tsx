@@ -2,13 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function NewJobPage() {
@@ -27,9 +25,7 @@ export default function NewJobPage() {
     status: "OPEN",
   });
 
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
@@ -37,7 +33,6 @@ export default function NewJobPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-
     try {
       const res = await fetch("/api/jobs", {
         method: "POST",
@@ -47,13 +42,11 @@ export default function NewJobPage() {
           closesAt: form.closesAt ? new Date(form.closesAt).toISOString() : undefined,
         }),
       });
-
       if (!res.ok) {
         const data = await res.json();
         setError(data.error ?? "Failed to create job");
         return;
       }
-
       router.push("/jobs");
     } catch {
       setError("Something went wrong. Please try again.");
@@ -62,165 +55,122 @@ export default function NewJobPage() {
     }
   }
 
+  const inputClass = "bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 focus:ring-[#c9a84c]/10 h-10 text-sm";
+  const labelClass = "text-xs font-medium text-zinc-400";
+
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <Link href="/jobs" className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-zinc-800">
-          <ArrowLeft className="h-4 w-4" />
-          Back
+    <div className="max-w-2xl space-y-7">
+      {/* Header */}
+      <div>
+        <Link href="/jobs" className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors mb-4">
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Jobs
         </Link>
-        <h1 className="text-2xl font-bold text-white">New Job Opening</h1>
+        <h1 className="text-2xl font-semibold text-white">New Job Opening</h1>
+        <p className="text-zinc-500 text-sm mt-1">Create a position to start receiving applications.</p>
       </div>
 
-      <Card className="bg-zinc-900 border-zinc-800">
-        <CardHeader>
-          <CardTitle className="text-white text-base">Job Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-zinc-300">
-                  Job Title <span className="text-red-400">*</span>
-                </Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={form.title}
-                  onChange={handleChange}
-                  required
-                  placeholder="e.g. Business Setup Consultant"
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
-                />
-              </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic info */}
+        <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-6 space-y-5">
+          <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Basic Info</h2>
 
-              <div className="space-y-2">
-                <Label htmlFor="wpJobOpeningId" className="text-zinc-300">
-                  WP Job Opening ID <span className="text-red-400">*</span>
-                </Label>
-                <Input
-                  id="wpJobOpeningId"
-                  name="wpJobOpeningId"
-                  value={form.wpJobOpeningId}
-                  onChange={handleChange}
-                  required
-                  placeholder="e.g. wp_123"
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="title" className={labelClass}>Job Title <span className="text-[#c9a84c]">*</span></Label>
+              <Input id="title" name="title" value={form.title} onChange={handleChange} required
+                placeholder="e.g. Business Setup Consultant" className={inputClass} />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="department" className="text-zinc-300">Department</Label>
-                <Input
-                  id="department"
-                  name="department"
-                  value={form.department}
-                  onChange={handleChange}
-                  placeholder="e.g. Sales"
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location" className="text-zinc-300">Location</Label>
-                <Input
-                  id="location"
-                  name="location"
-                  value={form.location}
-                  onChange={handleChange}
-                  placeholder="e.g. Dubai, UAE"
-                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-zinc-300">Status</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => setForm((p) => ({ ...p, status: v ?? "OPEN" }))}
-                >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-800 border-zinc-700">
-                    <SelectItem value="OPEN">Open</SelectItem>
-                    <SelectItem value="DRAFT">Draft</SelectItem>
-                    <SelectItem value="PAUSED">Paused</SelectItem>
-                    <SelectItem value="CLOSED">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="closesAt" className="text-zinc-300">Closes At</Label>
-                <Input
-                  id="closesAt"
-                  name="closesAt"
-                  type="date"
-                  value={form.closesAt}
-                  onChange={handleChange}
-                  className="bg-zinc-800 border-zinc-700 text-white"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-zinc-300">
-                Job Description <span className="text-red-400">*</span>
+            <div className="space-y-1.5">
+              <Label htmlFor="wpJobOpeningId" className={labelClass}>
+                WP Job ID <span className="text-[#c9a84c]">*</span>
               </Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                required
-                rows={5}
-                placeholder="Describe the role, responsibilities, and what the candidate will be doing..."
-                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 resize-none"
-              />
+              <Input id="wpJobOpeningId" name="wpJobOpeningId" value={form.wpJobOpeningId}
+                onChange={handleChange} required placeholder="e.g. wp_123" className={inputClass} />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="requirements" className="text-zinc-300">
-                Requirements <span className="text-red-400">*</span>
-              </Label>
-              <Textarea
-                id="requirements"
-                name="requirements"
-                value={form.requirements}
-                onChange={handleChange}
-                required
-                rows={5}
-                placeholder="List the skills, experience, and qualifications required..."
-                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 resize-none"
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="department" className={labelClass}>Department</Label>
+              <Input id="department" name="department" value={form.department} onChange={handleChange}
+                placeholder="e.g. Sales" className={inputClass} />
             </div>
-
-            {error && (
-              <div className="rounded-md bg-red-950 border border-red-800 px-3 py-2">
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="bg-[#c9a84c] hover:bg-[#b8952f] text-black font-semibold"
-              >
-                {isLoading ? "Creating…" : "Create Job Opening"}
-              </Button>
-              <Link href="/jobs" className="inline-flex items-center px-3 py-1.5 text-sm text-zinc-400 hover:text-white transition-colors rounded hover:bg-zinc-800">
-                Cancel
-              </Link>
+            <div className="space-y-1.5">
+              <Label htmlFor="location" className={labelClass}>Location</Label>
+              <Input id="location" name="location" value={form.location} onChange={handleChange}
+                placeholder="e.g. Dubai, UAE" className={inputClass} />
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className={labelClass}>Status</Label>
+              <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v ?? "OPEN" }))}>
+                <SelectTrigger className={inputClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#161616] border-white/[0.08]">
+                  <SelectItem value="OPEN">Open</SelectItem>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
+                  <SelectItem value="PAUSED">Paused</SelectItem>
+                  <SelectItem value="CLOSED">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="closesAt" className={labelClass}>Closes At</Label>
+              <Input id="closesAt" name="closesAt" type="date" value={form.closesAt}
+                onChange={handleChange} className={inputClass} />
+            </div>
+          </div>
+        </div>
+
+        {/* Description & Requirements */}
+        <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-6 space-y-5">
+          <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Role Details</h2>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="description" className={labelClass}>
+              Job Description <span className="text-[#c9a84c]">*</span>
+            </Label>
+            <Textarea id="description" name="description" value={form.description}
+              onChange={handleChange} required rows={5}
+              placeholder="Describe the role, responsibilities, and what the candidate will be doing…"
+              className="bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 text-sm resize-none" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="requirements" className={labelClass}>
+              Requirements <span className="text-[#c9a84c]">*</span>
+            </Label>
+            <Textarea id="requirements" name="requirements" value={form.requirements}
+              onChange={handleChange} required rows={5}
+              placeholder="List the skills, experience, and qualifications required…"
+              className="bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 text-sm resize-none" />
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-lg bg-red-500/5 border border-red-500/10 px-4 py-3">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#c9a84c] hover:bg-[#b8952f] disabled:opacity-50 text-black text-sm font-semibold transition-colors"
+          >
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isLoading ? "Creating…" : "Create Job Opening"}
+          </button>
+          <Link href="/jobs" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-2">
+            Cancel
+          </Link>
+        </div>
+      </form>
     </div>
   );
 }

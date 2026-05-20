@@ -2,10 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Phone, Mail, ExternalLink, Lock, Clock } from "lucide-react";
+import { ArrowLeft, Phone, Mail, ExternalLink, Lock, Clock, MapPin, Building2 } from "lucide-react";
 import StageBadge from "@/components/applications/stage-badge";
 import AiScoreCard from "@/components/applications/ai-score-card";
 import StageChanger from "@/components/applications/stage-changer";
@@ -34,10 +31,8 @@ export default async function ApplicationDetailPage({
       jobOpening: true,
       aiEvaluation: true,
       stageHistory: {
-        orderBy: { changedAt: "desc" },
-        include: {
-          changedBy: { select: { name: true } },
-        },
+        orderBy: { changedAt: "asc" },
+        include: { changedBy: { select: { name: true } } },
       },
       emailLogs: { orderBy: { sentAt: "desc" } },
       notes: {
@@ -50,49 +45,66 @@ export default async function ApplicationDetailPage({
   if (!application) notFound();
 
   const { applicant, jobOpening, aiEvaluation } = application;
+  const initials = `${applicant.firstName[0]}${applicant.lastName[0]}`.toUpperCase();
 
   return (
     <div className="space-y-6 max-w-5xl">
-      {/* Back link */}
-      <Link href="/applications" className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-zinc-800">
-        <ArrowLeft className="h-4 w-4" />
-        Applications
+      {/* Back */}
+      <Link href="/applications" className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Back to Applications
       </Link>
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">
-            {applicant.firstName} {applicant.lastName}
-          </h1>
-          <p className="text-zinc-400 mt-1">{jobOpening.title}</p>
-          <div className="flex items-center gap-4 mt-2 text-sm text-zinc-400">
-            <span className="flex items-center gap-1">
-              <Mail className="h-3.5 w-3.5" />
-              {applicant.email}
-            </span>
-            {applicant.phone && (
-              <span className="flex items-center gap-1">
-                <Phone className="h-3.5 w-3.5" />
-                {applicant.phone}
-              </span>
-            )}
+      {/* Header card */}
+      <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-6">
+        <div className="flex items-start gap-5">
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#c9a84c]/20 to-[#c9a84c]/5 border border-[#c9a84c]/20 flex items-center justify-center shrink-0">
+            <span className="text-[#c9a84c] text-lg font-bold">{initials}</span>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-xl font-semibold text-white">
+                  {applicant.firstName} {applicant.lastName}
+                </h1>
+                <p className="text-zinc-500 text-sm mt-0.5">{jobOpening.title}</p>
+              </div>
+              <StageBadge stage={application.currentStage as ApplicationStage} />
+            </div>
+
+            <div className="flex flex-wrap gap-4 mt-3">
+              <a href={`mailto:${applicant.email}`} className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                <Mail className="h-3.5 w-3.5" /> {applicant.email}
+              </a>
+              {applicant.phone && (
+                <a href={`tel:${applicant.phone}`} className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                  <Phone className="h-3.5 w-3.5" /> {applicant.phone}
+                </a>
+              )}
+              {jobOpening.location && (
+                <span className="flex items-center gap-1.5 text-xs text-zinc-600">
+                  <MapPin className="h-3.5 w-3.5" /> {jobOpening.location}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <StageBadge stage={application.currentStage as ApplicationStage} />
-          {canChangeStage && (
+
+        {canChangeStage && (
+          <div className="mt-5 pt-5 border-t border-white/[0.06] flex items-center gap-3">
+            <span className="text-xs text-zinc-500">Move stage:</span>
             <StageChanger
               applicationId={application.id}
               currentStage={application.currentStage as ApplicationStage}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column — AI evaluation + stage history + email log */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Main column */}
+        <div className="lg:col-span-2 space-y-5">
           {/* AI Evaluation */}
           {aiEvaluation ? (
             <AiScoreCard
@@ -102,205 +114,173 @@ export default async function ApplicationDetailPage({
               }}
             />
           ) : (
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardContent className="py-8 text-center text-zinc-500 text-sm">
-                AI evaluation pending — processing in background…
-              </CardContent>
-            </Card>
+            <div className="bg-[#111111] border border-white/[0.06] rounded-xl px-6 py-10 text-center">
+              <p className="text-zinc-500 text-sm">AI evaluation is processing in the background…</p>
+              <p className="text-zinc-700 text-xs mt-1">Refresh this page in a moment.</p>
+            </div>
           )}
 
           {/* Stage History */}
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-white text-base">Stage History</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <div className="bg-[#111111] border border-white/[0.06] rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/[0.06]">
+              <h3 className="text-sm font-semibold text-white">Stage History</h3>
+            </div>
+            <div className="px-6 py-5">
               {application.stageHistory.length === 0 ? (
-                <p className="text-zinc-500 text-sm">No history yet.</p>
+                <p className="text-zinc-600 text-sm">No history yet.</p>
               ) : (
-                <div className="space-y-3">
-                  {application.stageHistory.map((h) => (
-                    <div key={h.id} className="flex items-start gap-3">
-                      <Clock className="h-3.5 w-3.5 text-zinc-500 mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-zinc-300">
-                          {h.fromStage ? (
-                            <>
-                              Moved from{" "}
-                              <span className="text-zinc-400">{h.fromStage}</span> to{" "}
-                              <span className="text-white font-medium">{h.toStage}</span>
-                            </>
-                          ) : (
-                            <>
-                              Application received —{" "}
-                              <span className="text-white font-medium">{h.toStage}</span>
-                            </>
-                          )}
-                        </p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          {new Date(h.changedAt).toLocaleString()}
-                          {h.changedBy && ` · by ${h.changedBy.name}`}
-                        </p>
-                        {h.note && (
-                          <p className="text-xs text-zinc-400 mt-1 italic">{h.note}</p>
-                        )}
+                <div className="relative">
+                  <div className="absolute left-[7px] top-2 bottom-2 w-px bg-white/[0.06]" />
+                  <div className="space-y-5">
+                    {application.stageHistory.map((h) => (
+                      <div key={h.id} className="flex items-start gap-4">
+                        <div className="w-3.5 h-3.5 rounded-full bg-zinc-800 border-2 border-[#c9a84c]/50 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-zinc-300">
+                            {h.fromStage ? (
+                              <><span className="text-zinc-500">{h.fromStage}</span>{" → "}<span className="font-medium text-white">{h.toStage}</span></>
+                            ) : (
+                              <span className="font-medium text-white">Application received — {h.toStage}</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-zinc-600 mt-0.5">
+                            {new Date(h.changedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                            {h.changedBy && <> · {h.changedBy.name}</>}
+                          </p>
+                          {h.note && <p className="text-xs text-zinc-500 mt-1 italic">{h.note}</p>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Email Log */}
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-white text-base">Email Log</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <div className="bg-[#111111] border border-white/[0.06] rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/[0.06]">
+              <h3 className="text-sm font-semibold text-white">Email Log</h3>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
               {application.emailLogs.length === 0 ? (
-                <p className="text-zinc-500 text-sm">No emails sent yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {application.emailLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0"
-                    >
-                      <div>
-                        <p className="text-sm text-zinc-300">{log.subject}</p>
-                        <p className="text-xs text-zinc-500">
-                          To: {log.sentTo} · {new Date(log.sentAt).toLocaleString()}
-                        </p>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          log.status === "sent"
-                            ? "border-green-700 text-green-400 text-xs"
-                            : "border-red-700 text-red-400 text-xs"
-                        }
-                      >
-                        {log.status}
-                      </Badge>
-                    </div>
-                  ))}
+                <p className="px-6 py-5 text-sm text-zinc-600">No emails sent yet.</p>
+              ) : application.emailLogs.map((log) => (
+                <div key={log.id} className="flex items-center justify-between px-6 py-3.5">
+                  <div>
+                    <p className="text-sm text-zinc-300">{log.subject}</p>
+                    <p className="text-xs text-zinc-600 mt-0.5">
+                      {log.sentTo} · {new Date(log.sentAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                    </p>
+                  </div>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
+                    log.status === "sent"
+                      ? "bg-green-500/10 text-green-400 border-green-500/20"
+                      : "bg-red-500/10 text-red-400 border-red-500/20"
+                  }`}>
+                    {log.status}
+                  </span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          </div>
 
           {/* Notes */}
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-white text-base">Notes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="bg-[#111111] border border-white/[0.06] rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/[0.06]">
+              <h3 className="text-sm font-semibold text-white">Notes</h3>
+            </div>
+            <div className="p-6 space-y-5">
               {canAddNotes && (
-                <>
+                <div className="pb-5 border-b border-white/[0.06]">
                   <NoteForm applicationId={application.id} />
-                  <Separator className="bg-zinc-800" />
-                </>
+                </div>
               )}
               {application.notes.length === 0 ? (
-                <p className="text-zinc-500 text-sm">No notes yet.</p>
+                <p className="text-sm text-zinc-600">No notes yet.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {application.notes.map((note) => (
-                    <div key={note.id} className="space-y-1">
+                    <div key={note.id} className="space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-400 font-medium">
-                          {note.author.name}
-                        </span>
+                        <span className="text-xs font-semibold text-zinc-400">{note.author.name}</span>
                         {note.isPrivate && (
-                          <span className="flex items-center gap-1 text-xs text-zinc-600">
-                            <Lock className="h-3 w-3" />
-                            Private
+                          <span className="flex items-center gap-1 text-[10px] text-zinc-600 bg-zinc-800 px-1.5 py-0.5 rounded">
+                            <Lock className="h-2.5 w-2.5" /> Private
                           </span>
                         )}
-                        <span className="text-xs text-zinc-600 ml-auto">
-                          {new Date(note.createdAt).toLocaleString()}
+                        <span className="text-xs text-zinc-700 ml-auto">
+                          {new Date(note.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                         </span>
                       </div>
-                      <p className="text-sm text-zinc-300 leading-relaxed">{note.body}</p>
+                      <p className="text-sm text-zinc-400 leading-relaxed">{note.body}</p>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        {/* Right sidebar */}
+        {/* Sidebar */}
         <div className="space-y-4">
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-white text-base">Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+          {/* CV */}
+          <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-5">
+            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">CV / Resume</h3>
+            <a
+              href={application.cvUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full rounded-lg border border-white/[0.08] hover:border-[#c9a84c]/30 px-3 py-2.5 text-sm text-zinc-400 hover:text-[#c9a84c] transition-all"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open PDF
+            </a>
+          </div>
+
+          {/* Details */}
+          <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-5 space-y-4">
+            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Details</h3>
+            <div className="space-y-3">
               <div>
-                <p className="text-zinc-500">Applied</p>
-                <p className="text-zinc-300">
-                  {new Date(application.createdAt).toLocaleDateString()}
+                <p className="text-[11px] text-zinc-600 mb-0.5">Applied</p>
+                <p className="text-sm text-zinc-300">
+                  {new Date(application.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
                 </p>
               </div>
               <div>
-                <p className="text-zinc-500">Source</p>
-                <p className="text-zinc-300">{application.source}</p>
+                <p className="text-[11px] text-zinc-600 mb-0.5">Source</p>
+                <p className="text-sm text-zinc-300 capitalize">{application.source.replace(/_/g, " ")}</p>
               </div>
               <div>
-                <p className="text-zinc-500">GDPR Consent</p>
-                <p className={application.gdprConsent ? "text-green-400" : "text-red-400"}>
+                <p className="text-[11px] text-zinc-600 mb-0.5">GDPR Consent</p>
+                <p className={`text-sm font-medium ${application.gdprConsent ? "text-green-400" : "text-red-400"}`}>
                   {application.gdprConsent ? "Given" : "Not given"}
                 </p>
               </div>
-              {application.gdprConsentedAt && (
-                <div>
-                  <p className="text-zinc-500">Consented At</p>
-                  <p className="text-zinc-300">
-                    {new Date(application.gdprConsentedAt).toLocaleDateString()}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* CV link */}
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-white text-base">CV</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <a
-                href={application.cvUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 w-full rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Open CV (PDF)
-              </a>
-            </CardContent>
-          </Card>
-
-          {/* Job info */}
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-white text-base">Position</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p className="text-zinc-300 font-medium">{jobOpening.title}</p>
+          {/* Position */}
+          <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-5 space-y-3">
+            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Position</h3>
+            <div>
+              <p className="text-sm font-medium text-zinc-200">{jobOpening.title}</p>
               {jobOpening.department && (
-                <p className="text-zinc-500">{jobOpening.department}</p>
+                <p className="flex items-center gap-1.5 text-xs text-zinc-600 mt-1">
+                  <Building2 className="h-3 w-3" /> {jobOpening.department}
+                </p>
               )}
               {jobOpening.location && (
-                <p className="text-zinc-500">{jobOpening.location}</p>
+                <p className="flex items-center gap-1.5 text-xs text-zinc-600 mt-1">
+                  <MapPin className="h-3 w-3" /> {jobOpening.location}
+                </p>
               )}
-              <Link href={`/jobs/${jobOpening.id}`} className="text-sm text-[#c9a84c] hover:text-[#b8952f] transition-colors">
-                View job →
-              </Link>
-            </CardContent>
-          </Card>
+            </div>
+            <Link href={`/jobs/${jobOpening.id}`} className="text-xs text-[#c9a84c] hover:text-[#b8952f] transition-colors">
+              View job opening →
+            </Link>
+          </div>
         </div>
       </div>
     </div>

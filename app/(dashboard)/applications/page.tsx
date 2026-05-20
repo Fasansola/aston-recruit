@@ -2,17 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import StageBadge from "@/components/applications/stage-badge";
 import { ApplicationStage } from "@prisma/client";
+import { Users } from "lucide-react";
 
 export default async function ApplicationsPage() {
   const session = await auth();
@@ -29,77 +21,87 @@ export default async function ApplicationsPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div>
-        <h1 className="text-2xl font-bold text-white">Applications</h1>
-        <p className="text-zinc-400 mt-1">{applications.length} total</p>
+        <h1 className="text-2xl font-semibold text-white">Applications</h1>
+        <p className="text-zinc-500 text-sm mt-1">{applications.length} total</p>
       </div>
 
-      <div className="rounded-lg border border-zinc-800 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-zinc-800 hover:bg-transparent">
-              <TableHead className="text-zinc-400">Applicant</TableHead>
-              <TableHead className="text-zinc-400">Job</TableHead>
-              <TableHead className="text-zinc-400">Stage</TableHead>
-              <TableHead className="text-zinc-400">AI Score</TableHead>
-              <TableHead className="text-zinc-400">Applied</TableHead>
-              <TableHead className="text-zinc-400">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {applications.length === 0 && (
-              <TableRow className="border-zinc-800">
-                <TableCell colSpan={6} className="text-center text-zinc-500 py-12">
-                  No applications yet. They will appear here once candidates apply.
-                </TableCell>
-              </TableRow>
-            )}
-            {applications.map((app) => (
-              <TableRow key={app.id} className="border-zinc-800 hover:bg-zinc-900">
-                <TableCell>
-                  <div>
-                    <p className="font-medium text-white">
-                      {app.applicant.firstName} {app.applicant.lastName}
+      <div className="bg-[#111111] border border-white/[0.06] rounded-xl overflow-hidden">
+        {applications.length === 0 ? (
+          <div className="px-6 py-16 text-center">
+            <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+              <Users className="h-5 w-5 text-zinc-600" />
+            </div>
+            <p className="text-zinc-400 font-medium">No applications yet</p>
+            <p className="text-zinc-600 text-sm mt-1">Applications will appear here once candidates apply via your website.</p>
+          </div>
+        ) : (
+          <>
+            {/* Table header */}
+            <div className="grid grid-cols-[1fr_1fr_140px_80px_100px_80px] gap-4 px-6 py-3 border-b border-white/[0.06]">
+              <span className="text-[11px] font-semibold text-zinc-600 uppercase tracking-wider">Applicant</span>
+              <span className="text-[11px] font-semibold text-zinc-600 uppercase tracking-wider">Position</span>
+              <span className="text-[11px] font-semibold text-zinc-600 uppercase tracking-wider">Stage</span>
+              <span className="text-[11px] font-semibold text-zinc-600 uppercase tracking-wider">Score</span>
+              <span className="text-[11px] font-semibold text-zinc-600 uppercase tracking-wider">Applied</span>
+              <span className="text-[11px] font-semibold text-zinc-600 uppercase tracking-wider"></span>
+            </div>
+
+            <div className="divide-y divide-white/[0.04]">
+              {applications.map((app) => {
+                const initials = `${app.applicant.firstName[0]}${app.applicant.lastName[0]}`.toUpperCase();
+                return (
+                  <div key={app.id} className="grid grid-cols-[1fr_1fr_140px_80px_100px_80px] gap-4 items-center px-6 py-4 hover:bg-white/[0.02] transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-zinc-800 border border-white/[0.06] flex items-center justify-center shrink-0">
+                        <span className="text-zinc-300 text-[11px] font-semibold">{initials}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-zinc-100 truncate">
+                          {app.applicant.firstName} {app.applicant.lastName}
+                        </p>
+                        <p className="text-[11px] text-zinc-600 truncate">{app.applicant.email}</p>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-zinc-400 truncate">{app.jobOpening.title}</p>
+
+                    <div>
+                      <StageBadge stage={app.currentStage as ApplicationStage} />
+                    </div>
+
+                    <div>
+                      {app.aiEvaluation ? (
+                        <span className={`text-sm font-bold tabular-nums ${
+                          app.aiEvaluation.score >= 8 ? "text-green-400" :
+                          app.aiEvaluation.score >= 5 ? "text-yellow-400" : "text-red-400"
+                        }`}>
+                          {app.aiEvaluation.score}/10
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-700 italic">—</span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-zinc-600">
+                      {new Date(app.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                     </p>
-                    <p className="text-xs text-zinc-500">{app.applicant.email}</p>
+
+                    <div>
+                      <Link
+                        href={`/applications/${app.id}`}
+                        className="text-xs text-zinc-500 hover:text-[#c9a84c] transition-colors font-medium"
+                      >
+                        View →
+                      </Link>
+                    </div>
                   </div>
-                </TableCell>
-                <TableCell className="text-zinc-300 text-sm">
-                  {app.jobOpening.title}
-                </TableCell>
-                <TableCell>
-                  <StageBadge stage={app.currentStage as ApplicationStage} />
-                </TableCell>
-                <TableCell>
-                  {app.aiEvaluation ? (
-                    <span
-                      className={`font-bold text-sm ${
-                        app.aiEvaluation.score >= 8
-                          ? "text-green-400"
-                          : app.aiEvaluation.score >= 5
-                          ? "text-yellow-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {app.aiEvaluation.score}/10
-                    </span>
-                  ) : (
-                    <span className="text-zinc-600 text-sm">Pending</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-zinc-400 text-sm">
-                  {new Date(app.createdAt).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <Link href={`/applications/${app.id}`} className="text-sm text-zinc-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-zinc-800">
-                    View
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
