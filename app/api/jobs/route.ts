@@ -1,0 +1,85 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
+
+const createJobSchema = z.object({
+  wpJobOpeningId: z.string().min(1),
+  title: z.string().min(1).max(200),
+  department: z.string().optional(),
+  location: z.string().optional(),
+  description: z.string().min(1),
+  requirements: z.string().min(1),
+  closesAt: z.string().datetime().optional(),
+  status: z.enum(["DRAFT", "OPEN", "CLOSED", "PAUSED"]).optional().default("OPEN"),
+});
+
+export async function GET(_req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const jobs = await prisma.jobOpening.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { applications: true } },
+      },
+    });
+
+    return NextResponse.json(jobs);
+  } catch (error) {
+    console.error("[GET /api/jobs]", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Only ADMIN and HR_MANAGER can create jobs
+    // @ts-expect-error — custom role field
+    const role = session.user.role as string;
+    if (!["ADMIN", "HR_MANAGER"].includes(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const parsed = createJobSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid payload", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const job = await prisma.jobOpening.create({
+      data: {
+        wpJobOpeningId: parsed.data.wpJobOpeningId,
+        title: parsed.data.title,
+        department: parsed.data.department ?? null,
+        location: parsed.data.location ?? null,
+        description: parsed.data.description,
+        requirements: parsed.data.requirements,
+        status: parsed.data.status,
+        closesAt: parsed.data.closesAt ? new Date(parsed.data.closesAt) : null,
+      },
+    });
+
+    return NextResponse.json(job, { status: 201 });
+  } catch (error) {
+    console.error("[POST /api/jobs]", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
