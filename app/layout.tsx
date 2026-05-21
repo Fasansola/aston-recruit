@@ -17,6 +17,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Aston Recruit",
   description: "Internal Applicant Tracking System — Aston VIP",
+  icons: {
+    icon: "/aston-logo.svg",
+    shortcut: "/aston-logo.svg",
+    apple: "/aston-logo.svg",
+  },
 };
 
 export default function RootLayout({

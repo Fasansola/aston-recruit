@@ -43,10 +43,17 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-[6px] text-[#c9a84c] uppercase">
+          <div className="flex items-center justify-center mb-3">
+            <img
+              src="/aston-logo.svg"
+              alt="Aston VIP"
+              className="w-16 h-16 object-contain"
+            />
+          </div>
+          <h1 className="text-xl font-bold tracking-[4px] text-white uppercase">
             Aston VIP
           </h1>
-          <p className="text-zinc-500 text-sm mt-2 tracking-widest uppercase">
+          <p className="text-zinc-500 text-sm mt-1 tracking-widest uppercase">
             Recruitment Portal
           </p>
         </div>

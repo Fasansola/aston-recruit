@@ -50,11 +50,13 @@ export default function Sidebar({ user }: SidebarProps) {
   return (
     <aside className="flex flex-col w-60 min-h-screen bg-[#0c0c0c] border-r border-white/[0.06]">
       {/* Logo */}
-      <div className="px-5 pt-7 pb-6">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-[#c9a84c] flex items-center justify-center shrink-0">
-            <span className="text-black text-xs font-black">A</span>
-          </div>
+      <div className="px-5 pt-6 pb-5">
+        <div className="flex items-center gap-3">
+          <img
+            src="/aston-logo.svg"
+            alt="Aston VIP"
+            className="w-9 h-9 object-contain shrink-0"
+          />
           <div>
             <p className="text-white font-semibold text-sm tracking-wide leading-none">Aston VIP</p>
             <p className="text-[#c9a84c]/60 text-[10px] tracking-widest uppercase mt-0.5">Recruit</p>
