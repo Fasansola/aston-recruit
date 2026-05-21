@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { ArrowLeft, MapPin, Building2, Calendar, Pencil } from "lucide-react";
+import CopyableId from "@/components/ui/copyable-id";
 import StageBadge from "@/components/applications/stage-badge";
 import { ApplicationStage } from "@prisma/client";
 
@@ -147,9 +148,10 @@ export default async function JobDetailPage({
             </h3>
             <div className="space-y-3 text-sm">
               <div>
-                <p className="text-[11px] text-zinc-600 mb-0.5">WP Opening ID</p>
-                <p className="text-zinc-300 font-mono text-xs">
-                  {job.wpJobOpeningId}
+                <p className="text-[11px] text-zinc-600 mb-0.5">WordPress Job ID</p>
+                <CopyableId value={job.wpJobOpeningId} />
+                <p className="text-[11px] text-zinc-700 mt-1.5">
+                  Paste into the hidden <code className="text-zinc-600">job_opening_id</code> field in your Elementor form.
                 </p>
               </div>
               <div>

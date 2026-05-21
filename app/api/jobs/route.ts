@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
 const createJobSchema = z.object({
-  wpJobOpeningId: z.string().min(1),
+  wpJobOpeningId: z.string().min(1).optional(),
   title: z.string().min(1).max(200),
   department: z.string().optional(),
   location: z.string().optional(),
@@ -64,9 +64,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Fall back to a server-generated ID if none provided
+    const wpJobOpeningId =
+      parsed.data.wpJobOpeningId ||
+      `job_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
     const job = await prisma.jobOpening.create({
       data: {
-        wpJobOpeningId: parsed.data.wpJobOpeningId,
+        wpJobOpeningId,
         title: parsed.data.title,
         department: parsed.data.department ?? null,
         location: parsed.data.location ?? null,
