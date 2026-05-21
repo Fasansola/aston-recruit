@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { scoreApplication } from "@/lib/ai-scorer";
@@ -119,10 +120,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 9. Fire-and-forget background jobs — do NOT await these
-    // Return 200 immediately after this point
-    void scoreApplication(application.id);
-    void sendStageEmailWithLog(application.id, "APPLIED");
+    // 9. Background jobs — run after response is sent.
+    // `after()` ensures Vercel keeps the function alive until these complete
+    // even though the 200 response is already on its way to Make.com.
+    after(async () => {
+      await Promise.allSettled([
+        scoreApplication(application.id),
+        sendStageEmailWithLog(application.id, "APPLIED"),
+      ]);
+    });
 
     return NextResponse.json(
       { success: true, applicationId: application.id },
