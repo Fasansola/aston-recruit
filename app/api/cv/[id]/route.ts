@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { head } from "@vercel/blob";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
 /**
  * GET /api/cv/[id]
  *
- * Returns a short-lived signed download URL for a private CV blob.
+ * Streams a private Vercel Blob CV through this authenticated route so the
+ * browser never needs direct access to the blob (which would require our token).
  * Only authenticated users can access this endpoint.
- * The signed URL is returned as a redirect so the browser opens the PDF directly.
  */
 export async function GET(
   _req: NextRequest,
@@ -32,13 +31,27 @@ export async function GET(
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
 
-    // Generate a signed URL valid for 1 hour
-    const blobInfo = await head(application.cvUrl, {
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+    // Fetch the private blob server-side using our token, then stream it to
+    // the client. This avoids the browser needing to authenticate with Vercel Blob.
+    const blobResponse = await fetch(application.cvUrl, {
+      headers: {
+        Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+      },
     });
 
-    // Redirect the browser to the signed download URL
-    return NextResponse.redirect(blobInfo.downloadUrl);
+    if (!blobResponse.ok) {
+      console.error(`[GET /api/cv/${id}] Blob fetch failed: ${blobResponse.status}`);
+      return NextResponse.json({ error: "Could not load CV" }, { status: 502 });
+    }
+
+    // Pass through the PDF bytes with appropriate headers for inline rendering
+    return new NextResponse(blobResponse.body, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "inline; filename=\"cv.pdf\"",
+        "Cache-Control": "private, no-store",
+      },
+    });
   } catch (error) {
     console.error("[GET /api/cv/[id]]", error);
     return NextResponse.json({ error: "Could not load CV" }, { status: 500 });
