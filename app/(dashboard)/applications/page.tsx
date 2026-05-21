@@ -30,7 +30,12 @@ export default async function ApplicationsPage() {
 
       <BulkActionsTable
         applications={applications.map((a) => ({
-          ...a,
+          id: a.id,
+          currentStage: a.currentStage,
+          createdAt: a.createdAt,
+          isDuplicate: a.isDuplicate,
+          applicant: a.applicant,
+          jobOpening: a.jobOpening,
           aiEvaluation: a.aiEvaluation
             ? {
                 score: a.aiEvaluation.score,

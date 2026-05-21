@@ -79,22 +79,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 6. Check for duplicate application (same applicant + same job)
-    const existing = await prisma.application.findUnique({
+    // 6. Check for a previous application from the same person for the same job.
+    //    We no longer block re-applications — we flag them so HR can review and
+    //    decide whether to discard or process the new submission.
+    const previousApplication = await prisma.application.findFirst({
       where: {
-        applicantId_jobOpeningId: {
-          applicantId: applicant.id,
-          jobOpeningId: jobOpening.id,
-        },
+        applicantId: applicant.id,
+        jobOpeningId: jobOpening.id,
       },
+      orderBy: { createdAt: "desc" },
     });
 
-    if (existing) {
-      return NextResponse.json(
-        { error: "Duplicate application", applicationId: existing.id },
-        { status: 409 }
-      );
-    }
+    const isDuplicate = !!previousApplication;
 
     // 7. Create Application record
     const application = await prisma.application.create({
@@ -107,6 +103,7 @@ export async function POST(req: NextRequest) {
         gdprConsentedAt: new Date(),
         source: "elementor_form",
         makePayload: body as never,
+        isDuplicate,
       },
     });
 

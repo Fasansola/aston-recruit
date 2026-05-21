@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StageBadge from "@/components/applications/stage-badge";
 import { ApplicationStage } from "@prisma/client";
-import { Loader2, CheckSquare, Square, ChevronDown } from "lucide-react";
+import { Loader2, CheckSquare, Square, ChevronDown, Copy } from "lucide-react";
 
 const STAGES: { value: ApplicationStage; label: string }[] = [
   { value: "APPLIED", label: "Applied" },
@@ -30,6 +30,7 @@ interface ApplicationRow {
   id: string;
   currentStage: string;
   createdAt: Date;
+  isDuplicate: boolean;
   applicant: { firstName: string; lastName: string; email: string };
   jobOpening: { id: string; title: string };
   aiEvaluation: { score: number; recommendation: string } | null;
@@ -41,12 +42,14 @@ interface BulkActionsTableProps {
 }
 
 type BulkMode = "stage" | "email";
+type FilterTab = "all" | "duplicates";
 
 export default function BulkActionsTable({
   applications,
   isReadOnly = false,
 }: BulkActionsTableProps) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState<BulkMode | null>(null);
   const [bulkStage, setBulkStage] = useState<ApplicationStage | "">("");
@@ -59,10 +62,23 @@ export default function BulkActionsTable({
     text: string;
   } | null>(null);
 
-  const allIds = applications.map((a) => a.id);
+  const duplicateCount = applications.filter((a) => a.isDuplicate).length;
+  const visibleApplications =
+    activeTab === "duplicates"
+      ? applications.filter((a) => a.isDuplicate)
+      : applications;
+
+  const allIds = visibleApplications.map((a) => a.id);
   const allSelected =
     allIds.length > 0 && allIds.every((id) => selected.has(id));
   const someSelected = selected.size > 0;
+
+  function switchTab(tab: FilterTab) {
+    setActiveTab(tab);
+    setSelected(new Set());
+    setBulkMode(null);
+    setStatusMsg(null);
+  }
 
   function toggleAll() {
     if (allSelected) {
@@ -139,6 +155,31 @@ export default function BulkActionsTable({
     });
   }
 
+  async function handleBulkDiscard() {
+    startTransition(async () => {
+      try {
+        await Promise.all(
+          [...selected].map((id) =>
+            fetch(`/api/applications/${id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ currentStage: "REJECTED" }),
+            })
+          )
+        );
+        setStatusMsg({
+          type: "success",
+          text: `Discarded ${selected.size} duplicate application(s).`,
+        });
+        setSelected(new Set());
+        setBulkMode(null);
+        router.refresh();
+      } catch {
+        setStatusMsg({ type: "error", text: "Some updates failed. Please retry." });
+      }
+    });
+  }
+
   if (applications.length === 0) {
     return (
       <div className="bg-[#111111] border border-white/[0.06] rounded-xl px-6 py-16 text-center">
@@ -152,6 +193,36 @@ export default function BulkActionsTable({
 
   return (
     <div className="space-y-3">
+      {/* Filter tabs */}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => switchTab("all")}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            activeTab === "all"
+              ? "bg-white/[0.08] text-zinc-200"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          All ({applications.length})
+        </button>
+        <button
+          onClick={() => switchTab("duplicates")}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === "duplicates"
+              ? "bg-orange-500/10 text-orange-400"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <Copy className="h-3 w-3" />
+          Duplicates
+          {duplicateCount > 0 && (
+            <span className="bg-orange-500/20 text-orange-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              {duplicateCount}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Read-only banner */}
       {isReadOnly && (
         <div className="px-4 py-2.5 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
@@ -257,6 +328,21 @@ export default function BulkActionsTable({
             )}
           </div>
 
+          {/* Discard duplicates shortcut — only shown on duplicates tab */}
+          {activeTab === "duplicates" && (
+            <>
+              <div className="h-3.5 w-px bg-white/[0.08]" />
+              <button
+                onClick={handleBulkDiscard}
+                disabled={isPending}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/20 hover:border-red-500/40 bg-red-500/5 hover:bg-red-500/10 text-xs text-red-400 font-medium transition-all disabled:opacity-50"
+              >
+                {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+                Discard Selected
+              </button>
+            </>
+          )}
+
           <button
             onClick={() => {
               setSelected(new Set());
@@ -320,7 +406,12 @@ export default function BulkActionsTable({
         </div>
 
         <div className="divide-y divide-white/[0.04]">
-          {applications.map((app) => {
+          {visibleApplications.length === 0 && (
+            <p className="px-6 py-10 text-sm text-zinc-600 text-center">
+              No duplicate applications found.
+            </p>
+          )}
+          {visibleApplications.map((app) => {
             const initials =
               `${app.applicant.firstName[0]}${app.applicant.lastName[0]}`.toUpperCase();
             const isChecked = selected.has(app.id);
@@ -354,9 +445,16 @@ export default function BulkActionsTable({
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-zinc-100 truncate">
-                      {app.applicant.firstName} {app.applicant.lastName}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium text-zinc-100 truncate">
+                        {app.applicant.firstName} {app.applicant.lastName}
+                      </p>
+                      {app.isDuplicate && (
+                        <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                          <Copy className="h-2.5 w-2.5" /> Duplicate
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[11px] text-zinc-600 truncate">
                       {app.applicant.email}
                     </p>

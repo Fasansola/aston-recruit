@@ -10,6 +10,7 @@ import {
   Lock,
   MapPin,
   Building2,
+  Copy,
 } from "lucide-react";
 import StageBadge from "@/components/applications/stage-badge";
 import AiScoreCard from "@/components/applications/ai-score-card";
@@ -81,9 +82,16 @@ export default async function ApplicationDetailPage({
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-xl font-semibold text-white">
-                  {applicant.firstName} {applicant.lastName}
-                </h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl font-semibold text-white">
+                    {applicant.firstName} {applicant.lastName}
+                  </h1>
+                  {application.isDuplicate && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                      <Copy className="h-3 w-3" /> Duplicate Submission
+                    </span>
+                  )}
+                </div>
                 <p className="text-zinc-500 text-sm mt-0.5">
                   {jobOpening.title}
                 </p>

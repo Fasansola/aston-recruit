@@ -79,14 +79,13 @@ model Application {
   gdprConsentedAt DateTime?
   source          String           @default("elementor_form")
   makePayload     Json?
+  isDuplicate     Boolean          @default(false) // true when same applicant re-applies to the same job
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   aiEvaluation    AIEvaluation?
   stageHistory    StageHistory[]
   emailLogs       EmailLog[]
   notes           Note[]
-
-  @@unique([applicantId, jobOpeningId])
 }
 
 enum ApplicationStage {
