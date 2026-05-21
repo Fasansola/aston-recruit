@@ -18,6 +18,7 @@ import NoteForm from "@/components/applications/note-form";
 import SendEmailButton from "@/components/applications/send-email-button";
 import CvPreview from "@/components/applications/cv-preview";
 // CvPreview now uses applicationId — private blob URLs are served via /api/cv/[id]
+import RescoreButton from "@/components/applications/rescore-button";
 import { ApplicationStage, AIRecommendation } from "@prisma/client";
 
 export default async function ApplicationDetailPage({
@@ -142,13 +143,20 @@ export default async function ApplicationDetailPage({
               }}
             />
           ) : (
-            <div className="bg-[#111111] border border-white/[0.06] rounded-xl px-6 py-10 text-center">
-              <p className="text-zinc-500 text-sm">
-                AI evaluation is processing in the background…
-              </p>
-              <p className="text-zinc-700 text-xs mt-1">
-                Refresh this page in a moment.
-              </p>
+            <div className="bg-[#111111] border border-white/[0.06] rounded-xl px-6 py-10 text-center space-y-4">
+              <div>
+                <p className="text-zinc-500 text-sm">
+                  No AI evaluation yet.
+                </p>
+                <p className="text-zinc-700 text-xs mt-1">
+                  It may still be processing — refresh in ~20 seconds. If it never appears, use the button below.
+                </p>
+              </div>
+              {canChangeStage && (
+                <div className="max-w-xs mx-auto">
+                  <RescoreButton applicationId={application.id} />
+                </div>
+              )}
             </div>
           )}
 
