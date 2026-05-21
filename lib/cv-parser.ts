@@ -1,16 +1,25 @@
-// pdf-parse is a CommonJS module — use require() to avoid ESM default export issues
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse") as (buffer: Buffer) => Promise<{ text: string }>;
+import { extractText } from "unpdf";
 
 /**
- * Fetch a PDF from a URL (e.g. Vercel Blob) and extract its plain text.
+ * Downloads a PDF from a Vercel Blob (private) URL and extracts plain text.
+ * Private blobs require the BLOB_READ_WRITE_TOKEN as a Bearer token.
  */
 export async function extractCvText(cvUrl: string): Promise<string> {
-  const response = await fetch(cvUrl);
+  const response = await fetch(cvUrl, {
+    headers: {
+      Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+    },
+  });
+
   if (!response.ok) {
-    throw new Error(`Failed to fetch CV: ${response.status} ${response.statusText}`);
+    throw new Error(`Failed to fetch CV (${response.status}): ${cvUrl}`);
   }
+
   const buffer = await response.arrayBuffer();
-  const data = await pdfParse(Buffer.from(buffer));
-  return data.text;
+
+  const { text } = await extractText(new Uint8Array(buffer), {
+    mergePages: true,
+  });
+
+  return text ?? "";
 }
