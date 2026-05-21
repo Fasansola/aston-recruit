@@ -17,6 +17,7 @@ import StageChanger from "@/components/applications/stage-changer";
 import NoteForm from "@/components/applications/note-form";
 import SendEmailButton from "@/components/applications/send-email-button";
 import CvPreview from "@/components/applications/cv-preview";
+// CvPreview now uses applicationId — private blob URLs are served via /api/cv/[id]
 import { ApplicationStage, AIRecommendation } from "@prisma/client";
 
 export default async function ApplicationDetailPage({
@@ -297,7 +298,7 @@ export default async function ApplicationDetailPage({
             <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
               CV / Resume
             </h3>
-            <CvPreview cvUrl={application.cvUrl} />
+            <CvPreview applicationId={application.id} />
             <a
               href={application.cvUrl}
               target="_blank"

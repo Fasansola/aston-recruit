@@ -9,7 +9,7 @@ export async function uploadCv(
   buffer: Buffer
 ): Promise<string> {
   const blob = await put(filename, buffer, {
-    access: "public",
+    access: "private",
     contentType: "application/pdf",
   });
   return blob.url;

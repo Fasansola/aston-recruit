@@ -54,9 +54,9 @@ export async function POST(req: NextRequest) {
     const timestamp = Date.now();
     const filename = `cvs/${timestamp}_${originalName}`;
 
-    // Upload to Vercel Blob
+    // Upload to Vercel Blob (private store)
     const blob = await put(filename, file, {
-      access: "public",
+      access: "private",
       contentType: "application/pdf",
     });
 
