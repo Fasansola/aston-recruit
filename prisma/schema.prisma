@@ -43,6 +43,8 @@ model JobOpening {
   status         JobStatus     @default(OPEN)
   createdAt      DateTime      @default(now())
   closesAt       DateTime?
+  wpPostId       Int?          // WordPress post ID after publishing to the career CPT
+  wpPostUrl      String?       // WordPress post permalink
   applications   Application[]
 }
 

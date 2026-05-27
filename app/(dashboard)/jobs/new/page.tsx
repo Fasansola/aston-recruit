@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Copy, Check, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, Copy, Check, RefreshCw, Sparkles, Globe, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 /** Converts a job title into a URL-safe, unique job ID */
@@ -28,9 +28,14 @@ function randomSuffix(): string {
 export default function NewJobPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wpWarning, setWpWarning] = useState<string | null>(null);
+  const [wpPostUrl, setWpPostUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const suffixRef = useRef(randomSuffix()); // stable suffix for this session
+  const [publishToWordPress, setPublishToWordPress] = useState(false);
+  const [aiNotes, setAiNotes] = useState("");
+  const suffixRef = useRef(randomSuffix());
 
   const [form, setForm] = useState({
     wpJobOpeningId: "",
@@ -69,10 +74,43 @@ export default function NewJobPage() {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
+  async function handleGenerate() {
+    if (!form.title) {
+      setError("Enter a job title before generating.");
+      return;
+    }
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/jobs/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          department: form.department || undefined,
+          location: form.location || undefined,
+          notes: aiNotes,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "AI generation failed");
+      }
+      const { description, requirements } = await res.json();
+      setForm((prev) => ({ ...prev, description, requirements }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setWpWarning(null);
+    setWpPostUrl(null);
     try {
       const res = await fetch("/api/jobs", {
         method: "POST",
@@ -80,11 +118,24 @@ export default function NewJobPage() {
         body: JSON.stringify({
           ...form,
           closesAt: form.closesAt ? new Date(form.closesAt).toISOString() : undefined,
+          publishToWordPress,
         }),
       });
       if (!res.ok) {
         const data = await res.json();
         setError(data.error ?? "Failed to create job");
+        return;
+      }
+      const data = await res.json();
+      if (data.wpWarning) {
+        // Job created but WP publish failed — show warning then redirect
+        setWpWarning(data.wpWarning);
+        setTimeout(() => router.push("/jobs"), 4000);
+        return;
+      }
+      if (data.wpPostUrl) {
+        setWpPostUrl(data.wpPostUrl);
+        setTimeout(() => router.push("/jobs"), 3000);
         return;
       }
       router.push("/jobs");
@@ -184,16 +235,45 @@ export default function NewJobPage() {
           </div>
         </div>
 
-        {/* Description & Requirements */}
-        <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-6 space-y-5">
-          <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Role Details</h2>
+        {/* AI Generation */}
+        <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Role Details</h2>
+              <p className="text-[11px] text-zinc-600 mt-0.5">Write manually or generate with AI</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={isGenerating || !form.title}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#c9a84c]/10 hover:bg-[#c9a84c]/20 border border-[#c9a84c]/20 hover:border-[#c9a84c]/40 text-[#c9a84c] text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isGenerating
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating…</>
+                : <><Sparkles className="h-3.5 w-3.5" /> Generate with AI</>
+              }
+            </button>
+          </div>
+
+          {/* AI notes / hints */}
+          <div className="space-y-1.5">
+            <Label className={labelClass}>
+              AI Hints <span className="text-zinc-600 font-normal">(optional — the more detail, the better the output)</span>
+            </Label>
+            <Input
+              value={aiNotes}
+              onChange={(e) => setAiNotes(e.target.value)}
+              placeholder="e.g. 3+ years UAE experience, Arabic speaker preferred, DIFC knowledge"
+              className={inputClass}
+            />
+          </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="description" className={labelClass}>
               Job Description <span className="text-[#c9a84c]">*</span>
             </Label>
             <Textarea id="description" name="description" value={form.description}
-              onChange={handleChange} required rows={5}
+              onChange={handleChange} required rows={6}
               placeholder="Describe the role, responsibilities, and what the candidate will be doing…"
               className="bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 text-sm resize-none" />
           </div>
@@ -203,15 +283,63 @@ export default function NewJobPage() {
               Requirements <span className="text-[#c9a84c]">*</span>
             </Label>
             <Textarea id="requirements" name="requirements" value={form.requirements}
-              onChange={handleChange} required rows={5}
+              onChange={handleChange} required rows={6}
               placeholder="List the skills, experience, and qualifications required…"
               className="bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 text-sm resize-none" />
           </div>
         </div>
 
+        {/* WordPress publish toggle */}
+        <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-5">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <div className="relative mt-0.5">
+              <input
+                type="checkbox"
+                checked={publishToWordPress}
+                onChange={(e) => setPublishToWordPress(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 rounded-full bg-zinc-800 peer-checked:bg-[#c9a84c] transition-colors" />
+              <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform peer-checked:translate-x-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <Globe className="h-3.5 w-3.5 text-zinc-400" />
+                <span className="text-sm font-medium text-zinc-200">Publish to WordPress</span>
+              </div>
+              <p className="text-[11px] text-zinc-600 mt-0.5">
+                Creates a post under the <code className="text-zinc-500">career</code> custom post type on aston.ae simultaneously.
+                Requires <code className="text-zinc-500">WORDPRESS_URL</code>, <code className="text-zinc-500">WORDPRESS_USERNAME</code>, and <code className="text-zinc-500">WORDPRESS_APP_PASSWORD</code> to be set in Vercel.
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {/* Feedback */}
         {error && (
           <div className="rounded-lg bg-red-500/5 border border-red-500/10 px-4 py-3">
             <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+
+        {wpWarning && (
+          <div className="rounded-lg bg-yellow-500/5 border border-yellow-500/10 px-4 py-3">
+            <p className="text-yellow-400 text-sm font-medium">Job saved — WordPress publish failed</p>
+            <p className="text-yellow-400/70 text-xs mt-1">{wpWarning}</p>
+            <p className="text-zinc-600 text-xs mt-1">Redirecting to jobs list…</p>
+          </div>
+        )}
+
+        {wpPostUrl && (
+          <div className="rounded-lg bg-green-500/5 border border-green-500/10 px-4 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-green-400 text-sm font-medium">Published to WordPress!</p>
+              <p className="text-zinc-600 text-xs mt-0.5">Redirecting to jobs list…</p>
+            </div>
+            <a href={wpPostUrl} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300 transition-colors">
+              View post <ExternalLink className="h-3 w-3" />
+            </a>
           </div>
         )}
 
@@ -222,7 +350,10 @@ export default function NewJobPage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#c9a84c] hover:bg-[#b8952f] disabled:opacity-50 text-black text-sm font-semibold transition-colors"
           >
             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isLoading ? "Creating…" : "Create Job Opening"}
+            {isLoading
+              ? publishToWordPress ? "Creating & Publishing…" : "Creating…"
+              : publishToWordPress ? "Create & Publish to WordPress" : "Create Job Opening"
+            }
           </button>
           <Link href="/jobs" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-2">
             Cancel

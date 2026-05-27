@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { ArrowLeft, MapPin, Building2, Calendar, Pencil } from "lucide-react";
 import CopyableId from "@/components/ui/copyable-id";
 import StageBadge from "@/components/applications/stage-badge";
+import WpPublishButton from "@/components/jobs/wp-publish-button";
 import { ApplicationStage } from "@prisma/client";
 
 const JOB_STATUS_STYLES: Record<
@@ -166,6 +167,16 @@ export default async function JobDetailPage({
                   <p className="text-zinc-300">
                     {new Date(job.closesAt).toLocaleDateString()}
                   </p>
+                </div>
+              )}
+
+              {canEdit && (
+                <div className="pt-2 border-t border-white/[0.06]">
+                  <p className="text-[11px] text-zinc-600 mb-2">WordPress</p>
+                  <WpPublishButton
+                    jobId={job.id}
+                    currentWpPostUrl={job.wpPostUrl}
+                  />
                 </div>
               )}
             </div>

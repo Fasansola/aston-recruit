@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { publishJobToWordPress } from "@/lib/wp-publisher";
 
 const createJobSchema = z.object({
   wpJobOpeningId: z.string().min(1).optional(),
@@ -12,6 +13,7 @@ const createJobSchema = z.object({
   requirements: z.string().min(1),
   closesAt: z.string().datetime().optional(),
   status: z.enum(["DRAFT", "OPEN", "CLOSED", "PAUSED"]).optional().default("OPEN"),
+  publishToWordPress: z.boolean().optional().default(false),
 });
 
 export async function GET(_req: NextRequest) {
@@ -81,6 +83,40 @@ export async function POST(req: NextRequest) {
         closesAt: parsed.data.closesAt ? new Date(parsed.data.closesAt) : null,
       },
     });
+
+    // Optionally publish to WordPress immediately after creation
+    if (parsed.data.publishToWordPress) {
+      try {
+        const { wpPostId, wpPostUrl } = await publishJobToWordPress({
+          title: job.title,
+          description: job.description,
+          requirements: job.requirements,
+          department: job.department,
+          location: job.location,
+          wpJobOpeningId: job.wpJobOpeningId,
+        });
+
+        const updated = await prisma.jobOpening.update({
+          where: { id: job.id },
+          data: { wpPostId, wpPostUrl },
+        });
+
+        return NextResponse.json(updated, { status: 201 });
+      } catch (wpError) {
+        // Job was created — don't roll back. Return the job with a WP warning.
+        console.error("[POST /api/jobs] WordPress publish failed:", wpError);
+        return NextResponse.json(
+          {
+            ...job,
+            wpWarning:
+              wpError instanceof Error
+                ? wpError.message
+                : "WordPress publish failed — job was saved, but not published to the website.",
+          },
+          { status: 201 }
+        );
+      }
+    }
 
     return NextResponse.json(job, { status: 201 });
   } catch (error) {
