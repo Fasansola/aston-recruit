@@ -207,23 +207,30 @@ function safeEnumValue(
 }
 
 export async function publishJobToWordPress(job: JobData): Promise<WpPublishResult> {
-  const { WORDPRESS_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD } = process.env;
+  const {
+    WORDPRESS_URL,
+    WORDPRESS_USERNAME,
+    WORDPRESS_APP_PASSWORD,
+    WORDPRESS_CAREER_TOKEN,
+  } = process.env;
 
-  if (!WORDPRESS_URL || !WORDPRESS_USERNAME || !WORDPRESS_APP_PASSWORD) {
+  if (!WORDPRESS_URL) {
     throw new Error(
-      "WordPress publishing is not configured. Set WORDPRESS_URL, WORDPRESS_USERNAME, and WORDPRESS_APP_PASSWORD in your environment variables."
+      "WordPress publishing is not configured. Set WORDPRESS_URL in your environment variables."
     );
   }
 
-  // Basic auth — WP Application Passwords may include spaces; strip them.
-  const credentials = Buffer.from(
-    `${WORDPRESS_USERNAME}:${WORDPRESS_APP_PASSWORD.replace(/\s/g, "")}`
-  ).toString("base64");
+  const baseUrl = WORDPRESS_URL.replace(/\/$/, "");
 
-  const endpoint = `${WORDPRESS_URL.replace(/\/$/, "")}/wp-json/wp/v2/career`;
-
-  // Fetch allowed enum values so we never send an invalid option to a select field
-  const enums = await fetchAcfEnums(endpoint, credentials);
+  // ── ACF enum fetch (still uses standard WP REST OPTIONS — no auth needed) ──
+  const wpV2Endpoint = `${baseUrl}/wp-json/wp/v2/career`;
+  const credentials =
+    WORDPRESS_USERNAME && WORDPRESS_APP_PASSWORD
+      ? Buffer.from(
+          `${WORDPRESS_USERNAME}:${WORDPRESS_APP_PASSWORD.replace(/\s/g, "")}`
+        ).toString("base64")
+      : "";
+  const enums = await fetchAcfEnums(wpV2Endpoint, credentials);
 
   const requestBody = {
     title: job.title,
@@ -234,9 +241,6 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
       job.location,
       job.closesAt
     ),
-    status: "publish",
-    // ACF fields — written directly via the REST API when ACF is configured
-    // with "Show in REST API" enabled on the field group and each field.
     acf: {
       zoho_opening_id: job.wpJobOpeningId,
       short_description: job.shortDescription ?? "",
@@ -247,13 +251,42 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
     },
   };
 
-  const response = await fetch(endpoint, {
+  // ── Prefer the custom token endpoint (bypasses WP capability checks) ──────
+  // Falls back to the standard WP REST API with Basic Auth if no token is set.
+  if (WORDPRESS_CAREER_TOKEN) {
+    const customEndpoint = `${baseUrl}/wp-json/aston/v1/career`;
+    const response = await fetch(customEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Aston-Token": WORDPRESS_CAREER_TOKEN,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "(no body)");
+      throw new Error(`WordPress API returned ${response.status}: ${errorText}`);
+    }
+
+    const data = (await response.json()) as { id: number; link: string };
+    return { wpPostId: data.id, wpPostUrl: data.link };
+  }
+
+  // ── Fallback: standard WP REST API with Basic Auth ────────────────────────
+  if (!credentials) {
+    throw new Error(
+      "WordPress publishing requires either WORDPRESS_CAREER_TOKEN or both WORDPRESS_USERNAME and WORDPRESS_APP_PASSWORD."
+    );
+  }
+
+  const response = await fetch(wpV2Endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Basic ${credentials}`,
     },
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify({ ...requestBody, status: "publish" }),
   });
 
   if (!response.ok) {
@@ -262,9 +295,5 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
   }
 
   const data = (await response.json()) as { id: number; link: string };
-
-  return {
-    wpPostId: data.id,
-    wpPostUrl: data.link,
-  };
+  return { wpPostId: data.id, wpPostUrl: data.link };
 }
