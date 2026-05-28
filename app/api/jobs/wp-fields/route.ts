@@ -57,18 +57,22 @@ export async function GET() {
       });
     }
 
-    const credentials = Buffer.from(
-      `${WORDPRESS_USERNAME}:${WORDPRESS_APP_PASSWORD.replace(/\s/g, "")}`
-    ).toString("base64");
-
     const endpoint = `${WORDPRESS_URL.replace(/\/$/, "")}/wp-json/wp/v2/career`;
 
-    // OPTIONS returns the full JSON Schema for this endpoint including
-    // enum constraints that ACF adds for Select fields.
-    const res = await fetch(endpoint, {
-      method: "OPTIONS",
-      headers: { Authorization: `Basic ${credentials}` },
-    });
+    // Try public OPTIONS first (no credentials) — avoids triggering
+    // edit-context permission checks on some WP configurations.
+    let res = await fetch(endpoint, { method: "OPTIONS" });
+
+    // Fall back to authenticated request if public schema has no ACF data
+    if (!res.ok) {
+      const credentials = Buffer.from(
+        `${WORDPRESS_USERNAME}:${WORDPRESS_APP_PASSWORD.replace(/\s/g, "")}`
+      ).toString("base64");
+      res = await fetch(endpoint, {
+        method: "OPTIONS",
+        headers: { Authorization: `Basic ${credentials}` },
+      });
+    }
 
     if (!res.ok) {
       throw new Error(`WP schema fetch failed: ${res.status}`);

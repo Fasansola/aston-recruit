@@ -154,22 +154,35 @@ async function fetchAcfEnums(
   endpoint: string,
   credentials: string
 ): Promise<Record<string, string[]>> {
-  try {
-    const res = await fetch(endpoint, {
-      method: "OPTIONS",
-      headers: { Authorization: `Basic ${credentials}` },
-    });
-    if (!res.ok) return {};
+  type Schema = { properties?: { acf?: { properties?: Record<string, { enum?: string[] }> } } };
 
-    type Schema = { properties?: { acf?: { properties?: Record<string, { enum?: string[] }> } } };
+  async function parseEnums(res: Response): Promise<Record<string, string[]>> {
     const schema = (await res.json()) as Schema;
     const props = schema?.properties?.acf?.properties ?? {};
-
     return Object.fromEntries(
       Object.entries(props)
         .filter(([, v]) => Array.isArray(v.enum))
         .map(([k, v]) => [k, v.enum as string[]])
     );
+  }
+
+  try {
+    // Try unauthenticated OPTIONS first — avoids triggering edit-context
+    // permission checks that can 401 on some WP setups.
+    const publicRes = await fetch(endpoint, { method: "OPTIONS" });
+    if (publicRes.ok) {
+      const enums = await parseEnums(publicRes);
+      if (Object.keys(enums).length > 0) return enums;
+    }
+
+    // Fall back to authenticated OPTIONS if public schema had no enums
+    const authRes = await fetch(endpoint, {
+      method: "OPTIONS",
+      headers: { Authorization: `Basic ${credentials}` },
+    });
+    if (authRes.ok) return await parseEnums(authRes);
+
+    return {};
   } catch {
     return {};
   }
