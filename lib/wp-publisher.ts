@@ -145,6 +145,54 @@ function buildGutenbergContent(
   return blocks.join("\n\n");
 }
 
+/**
+ * Fetches the allowed enum values for ACF select fields on the career CPT
+ * by calling OPTIONS on the WP REST endpoint.
+ * Returns an object keyed by ACF field name → string[] of allowed values.
+ */
+async function fetchAcfEnums(
+  endpoint: string,
+  credentials: string
+): Promise<Record<string, string[]>> {
+  try {
+    const res = await fetch(endpoint, {
+      method: "OPTIONS",
+      headers: { Authorization: `Basic ${credentials}` },
+    });
+    if (!res.ok) return {};
+
+    type Schema = { properties?: { acf?: { properties?: Record<string, { enum?: string[] }> } } };
+    const schema = (await res.json()) as Schema;
+    const props = schema?.properties?.acf?.properties ?? {};
+
+    return Object.fromEntries(
+      Object.entries(props)
+        .filter(([, v]) => Array.isArray(v.enum))
+        .map(([k, v]) => [k, v.enum as string[]])
+    );
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * If the value is a valid enum option, return it as-is.
+ * If not (or if enums unknown), return the value unchanged — WP will reject
+ * invalid selects, but free-text fields will accept anything.
+ * Passing an empty string is safer than an invalid option for select fields.
+ */
+function safeEnumValue(
+  value: string | null | undefined,
+  enums: Record<string, string[]>,
+  field: string
+): string {
+  const allowed = enums[field];
+  const v = value ?? "";
+  if (!allowed || allowed.length === 0) return v;   // free-text field
+  if (allowed.includes(v)) return v;                // exact match ✓
+  return "";                                         // invalid — send empty
+}
+
 export async function publishJobToWordPress(job: JobData): Promise<WpPublishResult> {
   const { WORDPRESS_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD } = process.env;
 
@@ -161,6 +209,9 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
 
   const endpoint = `${WORDPRESS_URL.replace(/\/$/, "")}/wp-json/wp/v2/career`;
 
+  // Fetch allowed enum values so we never send an invalid option to a select field
+  const enums = await fetchAcfEnums(endpoint, credentials);
+
   const requestBody = {
     title: job.title,
     content: buildGutenbergContent(
@@ -174,12 +225,12 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
     // ACF fields — written directly via the REST API when ACF is configured
     // with "Show in REST API" enabled on the field group and each field.
     acf: {
-      zoho_opening_id: job.wpJobOpeningId,   // reused as the ATS job ID for Elementor
+      zoho_opening_id: job.wpJobOpeningId,
       short_description: job.shortDescription ?? "",
-      job_location: job.location ?? "",
-      wages: job.wages ?? "",
-      in_office__remote: job.workType ?? "",
-      job_type: job.jobType ?? "",
+      job_location: safeEnumValue(job.location, enums, "job_location"),
+      wages: safeEnumValue(job.wages, enums, "wages"),
+      in_office__remote: safeEnumValue(job.workType, enums, "in_office__remote"),
+      job_type: safeEnumValue(job.jobType, enums, "job_type"),
     },
   };
 

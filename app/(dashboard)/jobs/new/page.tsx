@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Copy, Check, RefreshCw, Sparkles, Globe, ExternalLink } from "lucide-react";
+import { ArrowLeft, Loader2, Copy, Check, RefreshCw, Sparkles, Globe, ExternalLink, AlertCircle } from "lucide-react";
+import type { WpFieldOptions } from "@/app/api/jobs/wp-fields/route";
 import Link from "next/link";
 
 /** Converts a job title into a URL-safe, unique job ID */
@@ -30,6 +31,12 @@ export default function NewJobPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wpFields, setWpFields] = useState<WpFieldOptions>({
+    job_location: [],
+    in_office__remote: [],
+    job_type: [],
+    wages: [],
+  });
   const [wpWarning, setWpWarning] = useState<string | null>(null);
   const [wpPostUrl, setWpPostUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -51,6 +58,14 @@ export default function NewJobPage() {
     closesAt: "",
     status: "OPEN",
   });
+
+  // Load WP ACF field options on mount
+  useEffect(() => {
+    fetch("/api/jobs/wp-fields")
+      .then((r) => r.json())
+      .then((data: WpFieldOptions) => setWpFields(data))
+      .catch(() => {}); // silently degrade
+  }, []);
 
   // Auto-generate the ID whenever the title changes
   useEffect(() => {
@@ -217,35 +232,54 @@ export default function NewJobPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            {/* Salary — free text if WP field has no enum, otherwise a select */}
             <div className="space-y-1.5">
               <Label htmlFor="wages" className={labelClass}>Salary / Wages</Label>
-              <Input id="wages" name="wages" value={form.wages} onChange={handleChange}
-                placeholder="e.g. Negotiable, AED 15,000/month" className={inputClass} />
+              {wpFields.wages.length > 0 ? (
+                <Select value={form.wages} onValueChange={(v) => setForm((p) => ({ ...p, wages: v ?? "" }))}>
+                  <SelectTrigger className={inputClass}><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent className="bg-[#161616] border-white/[0.08]">
+                    {wpFields.wages.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input id="wages" name="wages" value={form.wages} onChange={handleChange}
+                  placeholder="e.g. Negotiable, AED 15,000/month" className={inputClass} />
+              )}
             </div>
+
+            {/* Job Type — driven by WP ACF enum */}
             <div className="space-y-1.5">
-              <Label className={labelClass}>Job Type</Label>
+              <Label className={labelClass}>
+                Job Type
+                {wpFields.job_type.length > 0 && <span className="ml-1 text-[10px] text-zinc-600">(from WordPress)</span>}
+              </Label>
               <Select value={form.jobType} onValueChange={(v) => setForm((p) => ({ ...p, jobType: v ?? "" }))}>
                 <SelectTrigger className={inputClass}><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent className="bg-[#161616] border-white/[0.08]">
-                  <SelectItem value="Full-time">Full-time</SelectItem>
-                  <SelectItem value="Part-time">Part-time</SelectItem>
-                  <SelectItem value="Contract">Contract</SelectItem>
-                  <SelectItem value="Freelance">Freelance</SelectItem>
-                  <SelectItem value="Internship">Internship</SelectItem>
+                  {(wpFields.job_type.length > 0
+                    ? wpFields.job_type
+                    : ["Full-time", "Part-time", "Contract", "Freelance", "Internship"]
+                  ).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            {/* Work Arrangement — driven by WP ACF enum */}
             <div className="space-y-1.5">
-              <Label className={labelClass}>Work Arrangement</Label>
+              <Label className={labelClass}>
+                Work Arrangement
+                {wpFields.in_office__remote.length > 0 && <span className="ml-1 text-[10px] text-zinc-600">(from WordPress)</span>}
+              </Label>
               <Select value={form.workType} onValueChange={(v) => setForm((p) => ({ ...p, workType: v ?? "" }))}>
                 <SelectTrigger className={inputClass}><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent className="bg-[#161616] border-white/[0.08]">
-                  <SelectItem value="In-office">In-office</SelectItem>
-                  <SelectItem value="Remote">Remote</SelectItem>
-                  <SelectItem value="Hybrid">Hybrid</SelectItem>
+                  {(wpFields.in_office__remote.length > 0
+                    ? wpFields.in_office__remote
+                    : ["In-office", "Remote", "Hybrid"]
+                  ).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -255,6 +289,28 @@ export default function NewJobPage() {
                 onChange={handleChange} className={inputClass} />
             </div>
           </div>
+
+          {/* Location — driven by WP ACF enum when available */}
+          {wpFields.job_location.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className={labelClass}>
+                Office Location
+                <span className="ml-1 text-[10px] text-zinc-600">(from WordPress — must match site options)</span>
+              </Label>
+              <Select value={form.location} onValueChange={(v) => setForm((p) => ({ ...p, location: v ?? "" }))}>
+                <SelectTrigger className={inputClass}><SelectValue placeholder="Select…" /></SelectTrigger>
+                <SelectContent className="bg-[#161616] border-white/[0.08]">
+                  {wpFields.job_location.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {form.location && !wpFields.job_location.includes(form.location) && (
+                <p className="flex items-center gap-1 text-[11px] text-yellow-500">
+                  <AlertCircle className="h-3 w-3" />
+                  Current value &quot;{form.location}&quot; is not a valid WordPress option — select one above.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
