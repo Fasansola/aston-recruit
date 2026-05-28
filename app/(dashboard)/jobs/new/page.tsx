@@ -44,6 +44,10 @@ export default function NewJobPage() {
     location: "",
     description: "",
     requirements: "",
+    shortDescription: "",
+    wages: "",
+    workType: "",
+    jobType: "",
     closesAt: "",
     status: "OPEN",
   });
@@ -96,8 +100,8 @@ export default function NewJobPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "AI generation failed");
       }
-      const { description, requirements } = await res.json();
-      setForm((prev) => ({ ...prev, description, requirements }));
+      const { description, requirements, shortDescription } = await res.json();
+      setForm((prev) => ({ ...prev, description, requirements, shortDescription: shortDescription ?? prev.shortDescription }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -214,6 +218,46 @@ export default function NewJobPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
+              <Label htmlFor="wages" className={labelClass}>Salary / Wages</Label>
+              <Input id="wages" name="wages" value={form.wages} onChange={handleChange}
+                placeholder="e.g. Negotiable, AED 15,000/month" className={inputClass} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className={labelClass}>Job Type</Label>
+              <Select value={form.jobType} onValueChange={(v) => setForm((p) => ({ ...p, jobType: v ?? "" }))}>
+                <SelectTrigger className={inputClass}><SelectValue placeholder="Select…" /></SelectTrigger>
+                <SelectContent className="bg-[#161616] border-white/[0.08]">
+                  <SelectItem value="Full-time">Full-time</SelectItem>
+                  <SelectItem value="Part-time">Part-time</SelectItem>
+                  <SelectItem value="Contract">Contract</SelectItem>
+                  <SelectItem value="Freelance">Freelance</SelectItem>
+                  <SelectItem value="Internship">Internship</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className={labelClass}>Work Arrangement</Label>
+              <Select value={form.workType} onValueChange={(v) => setForm((p) => ({ ...p, workType: v ?? "" }))}>
+                <SelectTrigger className={inputClass}><SelectValue placeholder="Select…" /></SelectTrigger>
+                <SelectContent className="bg-[#161616] border-white/[0.08]">
+                  <SelectItem value="In-office">In-office</SelectItem>
+                  <SelectItem value="Remote">Remote</SelectItem>
+                  <SelectItem value="Hybrid">Hybrid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="closesAt" className={labelClass}>Closes At</Label>
+              <Input id="closesAt" name="closesAt" type="date" value={form.closesAt}
+                onChange={handleChange} className={inputClass} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
               <Label className={labelClass}>Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v ?? "OPEN" }))}>
                 <SelectTrigger className={inputClass}>
@@ -226,11 +270,6 @@ export default function NewJobPage() {
                   <SelectItem value="CLOSED">Closed</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="closesAt" className={labelClass}>Closes At</Label>
-              <Input id="closesAt" name="closesAt" type="date" value={form.closesAt}
-                onChange={handleChange} className={inputClass} />
             </div>
           </div>
         </div>
@@ -266,6 +305,17 @@ export default function NewJobPage() {
               placeholder="e.g. 3+ years UAE experience, Arabic speaker preferred, DIFC knowledge"
               className={inputClass}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="shortDescription" className={labelClass}>
+              Short Description
+              <span className="ml-2 text-zinc-600 font-normal">— shown on listing cards (auto-filled by AI)</span>
+            </Label>
+            <Textarea id="shortDescription" name="shortDescription" value={form.shortDescription}
+              onChange={handleChange} rows={2}
+              placeholder="1-2 sentence summary shown on the job listing card on the website…"
+              className="bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 text-sm resize-none" />
           </div>
 
           <div className="space-y-1.5">

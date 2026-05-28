@@ -24,11 +24,16 @@ export interface WpPublishResult {
 
 export interface JobData {
   title: string;
-  description: string;   // plain text, paragraphs separated by \n\n
-  requirements: string;  // plain text, bullets starting with • or -
+  description: string;      // plain text, paragraphs separated by \n\n
+  requirements: string;     // plain text, bullets starting with • or -
+  shortDescription?: string | null; // ACF: short_description
   department?: string | null;
-  location?: string | null;
+  location?: string | null;         // ACF: job_location
+  wages?: string | null;            // ACF: wages
+  workType?: string | null;         // ACF: in_office__remote
+  jobType?: string | null;          // ACF: job_type
   closesAt?: Date | null;
+  wpJobOpeningId: string;           // ACF: zoho_opening_id (reused for Elementor hidden field)
 }
 
 /**
@@ -166,6 +171,16 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
       job.closesAt
     ),
     status: "publish",
+    // ACF fields — written directly via the REST API when ACF is configured
+    // with "Show in REST API" enabled on the field group and each field.
+    acf: {
+      zoho_opening_id: job.wpJobOpeningId,   // reused as the ATS job ID for Elementor
+      short_description: job.shortDescription ?? "",
+      job_location: job.location ?? "",
+      wages: job.wages ?? "",
+      in_office__remote: job.workType ?? "",
+      job_type: job.jobType ?? "",
+    },
   };
 
   const response = await fetch(endpoint, {

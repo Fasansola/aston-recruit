@@ -40,12 +40,17 @@ model JobOpening {
   location       String?
   description    String        @db.Text
   requirements   String        @db.Text
-  status         JobStatus     @default(OPEN)
-  createdAt      DateTime      @default(now())
-  closesAt       DateTime?
-  wpPostId       Int?          // WordPress post ID after publishing to the career CPT
-  wpPostUrl      String?       // WordPress post permalink
-  applications   Application[]
+  status            JobStatus     @default(OPEN)
+  // ACF fields on the WordPress career CPT
+  shortDescription  String?       @db.Text  // ACF: short_description — shown in job listing cards
+  wages             String?       // ACF: wages — e.g. "Negotiable", "AED 15,000/month"
+  workType          String?       // ACF: in_office__remote — e.g. "Remote", "In-office", "Hybrid"
+  jobType           String?       // ACF: job_type — e.g. "Full-time", "Part-time", "Contract"
+  createdAt         DateTime      @default(now())
+  closesAt          DateTime?
+  wpPostId          Int?          // WordPress post ID after publishing to the career CPT
+  wpPostUrl         String?       // WordPress post permalink
+  applications      Application[]
 }
 
 enum JobStatus {
