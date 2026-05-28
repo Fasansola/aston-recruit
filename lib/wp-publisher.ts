@@ -75,21 +75,9 @@ function gutenbergList(items: string[]): string {
  */
 function buildGutenbergContent(
   description: string,
-  requirements: string,
-  department?: string | null,
-  location?: string | null,
-  closesAt?: Date | null
+  requirements: string
 ): string {
   const blocks: string[] = [];
-
-  // ── Location / Department badge (if provided) ──────────────────────────
-  const meta: string[] = [];
-  if (department) meta.push(department);
-  if (location) meta.push(location);
-  if (closesAt) meta.push(`Closes ${closesAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`);
-  if (meta.length > 0) {
-    blocks.push(gutenbergParagraph(`<strong>${meta.join(" · ")}</strong>`));
-  }
 
   // ── Description ────────────────────────────────────────────────────────
   // Split description into paragraphs; lines starting with • or - become
@@ -236,10 +224,7 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
     title: job.title,
     content: buildGutenbergContent(
       job.description,
-      job.requirements,
-      job.department,
-      job.location,
-      job.closesAt
+      job.requirements
     ),
     acf: {
       zoho_opening_id: job.wpJobOpeningId,
