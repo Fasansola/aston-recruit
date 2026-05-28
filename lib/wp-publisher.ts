@@ -47,7 +47,7 @@ function gutenbergParagraph(text: string): string {
 /**
  * Wraps a heading string in a Gutenberg heading block.
  */
-function gutenbergHeading(text: string, level: 2 | 3 | 4 = 3): string {
+function gutenbergHeading(text: string, level: 3 | 4 = 3): string {
   const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return `<!-- wp:heading {"level":${level}} -->\n<h${level} class="wp-block-heading" id="h-${id}">${text}</h${level}>\n<!-- /wp:heading -->`;
 }
@@ -132,7 +132,7 @@ function buildGutenbergContent(
   }
 
   // ── What we offer (standard Aston VIP closing) ─────────────────────────
-  blocks.push(gutenbergHeading("What we offer", 2));
+  blocks.push(gutenbergHeading("What we offer", 4));
   blocks.push(
     gutenbergParagraph(
       "Join a fast-growing international corporate advisory firm based in the UAE. " +
