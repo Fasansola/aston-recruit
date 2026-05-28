@@ -6,6 +6,7 @@ import { ArrowLeft, MapPin, Building2, Calendar, Pencil } from "lucide-react";
 import CopyableId from "@/components/ui/copyable-id";
 import StageBadge from "@/components/applications/stage-badge";
 import WpPublishButton from "@/components/jobs/wp-publish-button";
+import JobShareButtons from "@/components/jobs/job-share-buttons";
 import { ApplicationStage } from "@prisma/client";
 
 const JOB_STATUS_STYLES: Record<
@@ -176,6 +177,16 @@ export default async function JobDetailPage({
                   <WpPublishButton
                     jobId={job.id}
                     currentWpPostUrl={job.wpPostUrl}
+                  />
+                </div>
+              )}
+
+              {job.wpPostUrl && (
+                <div className="pt-2 border-t border-white/[0.06]">
+                  <p className="text-[11px] text-zinc-600 mb-2">Share</p>
+                  <JobShareButtons
+                    jobTitle={job.title}
+                    wpPostUrl={job.wpPostUrl}
                   />
                 </div>
               )}
