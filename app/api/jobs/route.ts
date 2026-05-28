@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
           requirements: job.requirements,
           department: job.department,
           location: job.location,
-          wpJobOpeningId: job.wpJobOpeningId,
+          closesAt: job.closesAt,
         });
 
         const updated = await prisma.jobOpening.update({

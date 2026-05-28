@@ -48,10 +48,14 @@ JOB TITLE: ${title}
 ${context}
 
 Return a JSON object with exactly these two fields:
+
 {
-  "description": "<3-4 paragraph job description covering: role overview, key responsibilities, what the candidate will be doing day-to-day, and why Aston VIP is a great place to work. Plain text, no markdown, use line breaks between paragraphs.>",
-  "requirements": "<bulleted list of 6-10 requirements covering experience, skills, and qualifications. Each bullet on a new line starting with '• '. Plain text, no markdown.>"
-}`,
+  "description": "<1-2 concise intro paragraphs (plain text, separated by a blank line) describing the role and its purpose at Aston VIP. Then on new lines, list 5-7 key day-to-day responsibilities, each starting with '• '. This separation is important — the publisher splits intro paragraphs from bullet lines automatically.>",
+  "requirements": "<6-10 requirements covering experience, qualifications, and skills. Each requirement on its own line starting with '• '. Plain text only — no markdown, no headings.>"
+}
+
+Example format for description:
+"The Business Setup Consultant will be the first point of contact for clients looking to establish a company in the UAE.\n\nWorking directly with clients across all stages of the setup process, you will guide them from initial consultation through to license issuance.\n\n• Advise clients on the most suitable business structure and jurisdiction\n• Manage the end-to-end application process for free zone and mainland licenses\n• Liaise with government authorities and free zone offices on behalf of clients"`,
       },
     ],
   });

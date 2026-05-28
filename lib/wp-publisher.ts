@@ -1,18 +1,20 @@
 /**
- * WordPress REST API publisher.
+ * WordPress REST API publisher for the Aston VIP career CPT.
  *
- * Publishes a job opening to the Aston VIP WordPress site as a post
- * under the "career" custom post type.
+ * The career post type on aston.ae uses no ACF fields — all job content
+ * lives in the standard Gutenberg `content` field. This publisher formats
+ * the description and requirements as proper Gutenberg block HTML so the
+ * published post matches the look and feel of manually created posts.
  *
  * Requirements on the WordPress side:
- *  1. The "career" CPT must be registered with `show_in_rest: true`
- *  2. An Application Password must be generated for a WP admin user
- *     (WP Admin → Users → Profile → Application Passwords)
+ *  - The "career" CPT must be registered with `show_in_rest: true`
+ *  - An Application Password must be generated for a WP admin user
+ *    (WP Admin → Users → your user → Application Passwords)
  *
  * Environment variables required:
  *  WORDPRESS_URL          e.g. https://aston.ae
  *  WORDPRESS_USERNAME     WP admin username
- *  WORDPRESS_APP_PASSWORD Application Password (spaces are fine — WP strips them)
+ *  WORDPRESS_APP_PASSWORD Application Password from WP admin
  */
 
 export interface WpPublishResult {
@@ -22,33 +24,120 @@ export interface WpPublishResult {
 
 export interface JobData {
   title: string;
-  description: string;
-  requirements: string;
+  description: string;   // plain text, paragraphs separated by \n\n
+  requirements: string;  // plain text, bullets starting with • or -
   department?: string | null;
   location?: string | null;
-  wpJobOpeningId: string; // stored as post meta so the form hidden field maps correctly
+  closesAt?: Date | null;
 }
 
 /**
- * Formats description + requirements as simple HTML for the WP post body.
+ * Wraps a plain-text paragraph in a Gutenberg paragraph block.
  */
-function buildPostContent(description: string, requirements: string): string {
-  // Convert plain-text paragraphs (separated by \n\n or \n) to <p> tags
-  const descHtml = description
-    .split(/\n{2,}/)
-    .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
-    .join("\n");
+function gutenbergParagraph(text: string): string {
+  const escaped = text.replace(/\n/g, "<br>");
+  return `<!-- wp:paragraph -->\n<p class="wp-block-paragraph">${escaped}</p>\n<!-- /wp:paragraph -->`;
+}
 
-  // Convert bullet lines (starting with •) to <li> items
-  const reqLines = requirements.split("\n").filter((l) => l.trim());
-  const reqHtml =
-    "<h3>Requirements</h3>\n<ul>\n" +
-    reqLines
-      .map((l) => `<li>${l.replace(/^[•\-]\s*/, "").trim()}</li>`)
-      .join("\n") +
-    "\n</ul>";
+/**
+ * Wraps a heading string in a Gutenberg heading block.
+ */
+function gutenbergHeading(text: string, level: 2 | 3 | 4 = 3): string {
+  const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return `<!-- wp:heading {"level":${level}} -->\n<h${level} class="wp-block-heading" id="h-${id}">${text}</h${level}>\n<!-- /wp:heading -->`;
+}
 
-  return `${descHtml}\n\n${reqHtml}`;
+/**
+ * Wraps an array of plain-text items in a Gutenberg list block.
+ */
+function gutenbergList(items: string[]): string {
+  const liItems = items.map((item) => `<li>${item.trim()}</li>`).join("\n\n\n\n");
+  return `<!-- wp:list -->\n<ul class="wp-block-list">\n${liItems}\n</ul>\n<!-- /wp:list -->`;
+}
+
+/**
+ * Converts plain-text job content into Gutenberg block HTML that matches
+ * the structure of existing career posts on aston.ae.
+ *
+ * Output structure:
+ *   [intro paragraphs from description]
+ *   ## What you will do
+ *   [bullet list parsed from description — lines after "responsibilities" marker]
+ *   ## What you need for this
+ *   [bullet list from requirements]
+ *   ## What we offer
+ *   [closing paragraph about Aston VIP]
+ */
+function buildGutenbergContent(
+  description: string,
+  requirements: string,
+  department?: string | null,
+  location?: string | null,
+  closesAt?: Date | null
+): string {
+  const blocks: string[] = [];
+
+  // ── Location / Department badge (if provided) ──────────────────────────
+  const meta: string[] = [];
+  if (department) meta.push(department);
+  if (location) meta.push(location);
+  if (closesAt) meta.push(`Closes ${closesAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`);
+  if (meta.length > 0) {
+    blocks.push(gutenbergParagraph(`<strong>${meta.join(" · ")}</strong>`));
+  }
+
+  // ── Description ────────────────────────────────────────────────────────
+  // Split description into paragraphs; lines starting with • or - become
+  // a "What you will do" list; everything else is intro paragraphs.
+  const descLines = description.split(/\n+/);
+  const introParagraphs: string[] = [];
+  const responsibilityItems: string[] = [];
+
+  for (const line of descLines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (/^[•\-]/.test(trimmed)) {
+      responsibilityItems.push(trimmed.replace(/^[•\-]\s*/, ""));
+    } else {
+      introParagraphs.push(trimmed);
+    }
+  }
+
+  // Intro paragraphs
+  for (const para of introParagraphs) {
+    blocks.push(gutenbergParagraph(para));
+  }
+
+  // "What you will do" section (only if there are responsibility bullets)
+  if (responsibilityItems.length > 0) {
+    blocks.push(gutenbergHeading("What you will do", 3));
+    blocks.push(gutenbergList(responsibilityItems));
+  }
+
+  // ── Requirements ───────────────────────────────────────────────────────
+  const reqItems = requirements
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter((l) => l)
+    .map((l) => l.replace(/^[•\-]\s*/, ""));
+
+  if (reqItems.length > 0) {
+    blocks.push(gutenbergHeading("What you need for this", 3));
+    blocks.push(gutenbergList(reqItems));
+  }
+
+  // ── What we offer (standard Aston VIP closing) ─────────────────────────
+  blocks.push(gutenbergHeading("What we offer", 2));
+  blocks.push(
+    gutenbergParagraph(
+      "Join a fast-growing international corporate advisory firm based in the UAE. " +
+      "You will work directly with senior leadership and gain hands-on exposure to business setup, " +
+      "free zone licensing, visa services, and corporate structuring across one of the world's most " +
+      "dynamic business environments."
+    )
+  );
+
+  return blocks.join("\n\n");
 }
 
 export async function publishJobToWordPress(job: JobData): Promise<WpPublishResult> {
@@ -60,23 +149,23 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
     );
   }
 
-  // Basic auth: base64(username:app_password). WP app passwords may contain spaces — remove them first.
+  // Basic auth — WP Application Passwords may include spaces; strip them.
   const credentials = Buffer.from(
     `${WORDPRESS_USERNAME}:${WORDPRESS_APP_PASSWORD.replace(/\s/g, "")}`
   ).toString("base64");
 
   const endpoint = `${WORDPRESS_URL.replace(/\/$/, "")}/wp-json/wp/v2/career`;
 
-  const body = {
+  const requestBody = {
     title: job.title,
-    content: buildPostContent(job.description, job.requirements),
+    content: buildGutenbergContent(
+      job.description,
+      job.requirements,
+      job.department,
+      job.location,
+      job.closesAt
+    ),
     status: "publish",
-    // Store the ATS job ID as post meta so Elementor forms can reference it
-    meta: {
-      job_opening_id: job.wpJobOpeningId,
-      ...(job.department && { job_department: job.department }),
-      ...(job.location && { job_location: job.location }),
-    },
   };
 
   const response = await fetch(endpoint, {
@@ -85,14 +174,12 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
       "Content-Type": "application/json",
       Authorization: `Basic ${credentials}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "(no body)");
-    throw new Error(
-      `WordPress API returned ${response.status}: ${errorText}`
-    );
+    throw new Error(`WordPress API returned ${response.status}: ${errorText}`);
   }
 
   const data = (await response.json()) as { id: number; link: string };

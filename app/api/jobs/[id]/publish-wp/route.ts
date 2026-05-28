@@ -37,7 +37,7 @@ export async function POST(
       requirements: job.requirements,
       department: job.department,
       location: job.location,
-      wpJobOpeningId: job.wpJobOpeningId,
+      closesAt: job.closesAt,
     });
 
     // Persist the WP post reference on the job record
