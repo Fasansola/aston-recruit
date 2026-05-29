@@ -3,79 +3,87 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { ApplicationStage } from "@prisma/client";
-import { TrendingUp, ArrowRight } from "lucide-react";
+import { TrendingUp, Mail, Briefcase, Clock } from "lucide-react";
 
 const STAGES: {
   value: ApplicationStage;
   label: string;
-  accent: string;
+  sectionBorder: string;
+  headerBg: string;
   dot: string;
-  rowBg: string;
   countBg: string;
   countText: string;
+  cardAccent: string;
 }[] = [
   {
     value: "APPLIED",
     label: "Applied",
-    accent: "border-l-zinc-500",
+    sectionBorder: "border-l-zinc-500",
+    headerBg: "bg-zinc-500/[0.07]",
     dot: "bg-zinc-400",
-    rowBg: "bg-zinc-500/5",
     countBg: "bg-zinc-800",
     countText: "text-zinc-300",
+    cardAccent: "hover:border-zinc-500/40",
   },
   {
     value: "SCREENING",
     label: "Screening",
-    accent: "border-l-blue-500",
+    sectionBorder: "border-l-blue-500",
+    headerBg: "bg-blue-500/[0.07]",
     dot: "bg-blue-400",
-    rowBg: "bg-blue-500/5",
     countBg: "bg-blue-500/10",
     countText: "text-blue-400",
+    cardAccent: "hover:border-blue-500/40",
   },
   {
     value: "SHORTLISTED",
     label: "Shortlisted",
-    accent: "border-l-violet-500",
+    sectionBorder: "border-l-violet-500",
+    headerBg: "bg-violet-500/[0.07]",
     dot: "bg-violet-400",
-    rowBg: "bg-violet-500/5",
     countBg: "bg-violet-500/10",
     countText: "text-violet-400",
+    cardAccent: "hover:border-violet-500/40",
   },
   {
     value: "INTERVIEW",
     label: "Interview",
-    accent: "border-l-amber-500",
+    sectionBorder: "border-l-amber-500",
+    headerBg: "bg-amber-500/[0.07]",
     dot: "bg-amber-400",
-    rowBg: "bg-amber-500/5",
     countBg: "bg-amber-500/10",
     countText: "text-amber-400",
+    cardAccent: "hover:border-amber-500/40",
   },
   {
     value: "OFFER",
     label: "Offer",
-    accent: "border-l-orange-500",
+    sectionBorder: "border-l-orange-500",
+    headerBg: "bg-orange-500/[0.07]",
     dot: "bg-orange-400",
-    rowBg: "bg-orange-500/5",
     countBg: "bg-orange-500/10",
     countText: "text-orange-400",
+    cardAccent: "hover:border-orange-500/40",
   },
   {
     value: "HIRED",
     label: "Hired",
-    accent: "border-l-green-500",
+    sectionBorder: "border-l-green-500",
+    headerBg: "bg-green-500/[0.07]",
     dot: "bg-green-400",
-    rowBg: "bg-green-500/5",
     countBg: "bg-green-500/10",
     countText: "text-green-400",
+    cardAccent: "hover:border-green-500/40",
   },
   {
     value: "REJECTED",
     label: "Rejected",
-    accent: "border-l-red-500",
+    sectionBorder: "border-l-red-500",
+    headerBg: "bg-red-500/[0.07]",
     dot: "bg-red-400",
-    rowBg: "bg-red-500/5",
     countBg: "bg-red-500/10",
     countText: "text-red-400",
+    cardAccent: "hover:border-red-500/40",
   },
 ];
 
@@ -131,13 +139,15 @@ export default async function PipelinePage() {
           return (
             <div
               key={stage.value}
-              className={`border border-white/[0.06] border-l-2 ${stage.accent} rounded-xl overflow-hidden`}
+              className={`border border-white/[0.06] border-l-2 ${stage.sectionBorder} rounded-xl overflow-hidden`}
             >
-              {/* Stage header row */}
-              <div className={`flex items-center justify-between px-5 py-3 ${stage.rowBg} border-b border-white/[0.06]`}>
+              {/* Stage header */}
+              <div
+                className={`flex items-center justify-between px-5 py-3 ${stage.headerBg} border-b border-white/[0.05]`}
+              >
                 <div className="flex items-center gap-2.5">
-                  <span className={`w-2 h-2 rounded-full ${stage.dot}`} />
-                  <span className="text-sm font-semibold text-zinc-200">
+                  <span className={`w-2 h-2 rounded-full ${stage.dot} shadow-sm`} />
+                  <span className="text-sm font-semibold text-zinc-200 tracking-wide">
                     {stage.label}
                   </span>
                 </div>
@@ -148,72 +158,100 @@ export default async function PipelinePage() {
                 </span>
               </div>
 
-              {/* Applicant rows */}
+              {/* Cards grid */}
               {cards.length === 0 ? (
-                <div className="px-5 py-4 bg-[#0d0d0d]">
+                <div className="px-5 py-5 bg-[#0c0c0c]">
                   <p className="text-xs text-zinc-800 italic">No candidates at this stage</p>
                 </div>
               ) : (
-                <div className="bg-[#0d0d0d] divide-y divide-white/[0.04]">
+                <div className="bg-[#0c0c0c] p-4 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
                   {cards.map((app) => {
                     const initials =
                       `${app.applicant.firstName[0]}${app.applicant.lastName[0]}`.toUpperCase();
                     const score = app.aiEvaluation?.score;
-                    const scoreColor =
-                      score === undefined ? "" :
-                      score >= 8 ? "text-green-400 bg-green-500/10 border-green-500/20" :
-                      score >= 5 ? "text-amber-400 bg-amber-500/10 border-amber-500/20" :
-                                   "text-red-400 bg-red-500/10 border-red-500/20";
-                    const avatarColor =
-                      score === undefined ? "bg-zinc-800 text-zinc-400" :
-                      score >= 8 ? "bg-green-500/10 text-green-400" :
-                      score >= 5 ? "bg-amber-500/10 text-amber-400" :
-                                   "bg-red-500/10 text-red-400";
+
+                    const avatarRing =
+                      score === undefined
+                        ? "ring-zinc-700"
+                        : score >= 8
+                        ? "ring-green-500/40"
+                        : score >= 5
+                        ? "ring-amber-500/40"
+                        : "ring-red-500/40";
+
+                    const avatarBg =
+                      score === undefined
+                        ? "bg-zinc-800 text-zinc-400"
+                        : score >= 8
+                        ? "bg-green-500/10 text-green-400"
+                        : score >= 5
+                        ? "bg-amber-500/10 text-amber-400"
+                        : "bg-red-500/10 text-red-400";
+
+                    const scorePill =
+                      score === undefined
+                        ? null
+                        : score >= 8
+                        ? "bg-green-500/10 text-green-400 border-green-500/20"
+                        : score >= 5
+                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                        : "bg-red-500/10 text-red-400 border-red-500/20";
 
                     return (
                       <Link
                         key={app.id}
                         href={`/applications/${app.id}`}
-                        className="group grid grid-cols-[auto_1fr_200px_80px_60px] items-center gap-4 px-5 py-3.5 hover:bg-white/[0.02] transition-colors"
+                        className={`group relative flex flex-col bg-[#111111] border border-white/[0.07] ${stage.cardAccent} rounded-xl p-4 gap-3 transition-all duration-150 hover:bg-[#161616] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-px`}
                       >
-                        {/* Avatar */}
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${avatarColor}`}>
-                          <span className="text-[11px] font-bold">{initials}</span>
+                        {/* Top: avatar + name */}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-9 h-9 rounded-full ring-1 ${avatarRing} flex items-center justify-center shrink-0 ${avatarBg}`}
+                          >
+                            <span className="text-xs font-bold">{initials}</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-zinc-100 group-hover:text-white transition-colors truncate leading-snug">
+                              {app.applicant.firstName} {app.applicant.lastName}
+                            </p>
+                            {score !== undefined && scorePill && (
+                              <span
+                                className={`inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded border text-[10px] font-bold tabular-nums ${scorePill}`}
+                              >
+                                <TrendingUp className="h-2.5 w-2.5" />
+                                {score}/10
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Name + job */}
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-zinc-100 group-hover:text-white transition-colors truncate">
-                            {app.applicant.firstName} {app.applicant.lastName}
-                          </p>
-                          <p className="text-[11px] text-zinc-600 truncate mt-0.5">
-                            {app.jobOpening.title}
-                          </p>
+                        {/* Middle: job + email */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Briefcase className="h-3 w-3 text-zinc-600 shrink-0" />
+                            <p className="text-xs text-zinc-400 truncate">
+                              {app.jobOpening.title}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Mail className="h-3 w-3 text-zinc-600 shrink-0" />
+                            <p className="text-xs text-zinc-600 truncate">
+                              {app.applicant.email}
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Job title (email) */}
-                        <p className="text-xs text-zinc-600 truncate hidden md:block">
-                          {app.applicant.email}
-                        </p>
-
-                        {/* Applied */}
-                        <p className="text-[11px] text-zinc-600 tabular-nums text-right">
-                          {relativeDate(new Date(app.createdAt))}
-                        </p>
-
-                        {/* Score + arrow */}
-                        <div className="flex items-center justify-end gap-2">
-                          {score !== undefined ? (
-                            <span
-                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold tabular-nums ${scoreColor}`}
-                            >
-                              <TrendingUp className="h-2.5 w-2.5" />
-                              {score}/10
+                        {/* Bottom: date + arrow */}
+                        <div className="flex items-center justify-between pt-2 border-t border-white/[0.05]">
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="h-3 w-3 text-zinc-700" />
+                            <span className="text-[11px] text-zinc-600 tabular-nums">
+                              {relativeDate(new Date(app.createdAt))}
                             </span>
-                          ) : (
-                            <span className="text-[10px] text-zinc-800">—</span>
-                          )}
-                          <ArrowRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-[#c9a84c] group-hover:translate-x-0.5 transition-all" />
+                          </div>
+                          <span className="text-[11px] text-zinc-700 group-hover:text-[#c9a84c] transition-colors font-medium">
+                            View →
+                          </span>
                         </div>
                       </Link>
                     );
