@@ -20,6 +20,7 @@ import SendEmailButton from "@/components/applications/send-email-button";
 import CvPreview from "@/components/applications/cv-preview";
 // CvPreview now uses applicationId — private blob URLs are served via /api/cv/[id]
 import RescoreButton from "@/components/applications/rescore-button";
+import DeleteButton from "@/components/ui/delete-button";
 import { ApplicationStage, AIRecommendation } from "@prisma/client";
 
 export default async function ApplicationDetailPage({
@@ -135,6 +136,17 @@ export default async function ApplicationDetailPage({
             </div>
             <div className="h-4 w-px bg-white/[0.06]" />
             <SendEmailButton applicationId={application.id} />
+            {role === "ADMIN" && (
+              <>
+                <div className="h-4 w-px bg-white/[0.06]" />
+                <DeleteButton
+                  endpoint={`/api/applications/${application.id}`}
+                  redirectTo="/applications"
+                  label="Delete Application"
+                  confirmMessage="Are you sure you want to delete this application and all its data (AI evaluation, notes, emails)? This cannot be undone."
+                />
+              </>
+            )}
           </div>
         )}
       </div>

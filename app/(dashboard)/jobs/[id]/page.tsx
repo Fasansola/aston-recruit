@@ -7,6 +7,7 @@ import CopyableId from "@/components/ui/copyable-id";
 import StageBadge from "@/components/applications/stage-badge";
 import WpPublishButton from "@/components/jobs/wp-publish-button";
 import JobShareButtons from "@/components/jobs/job-share-buttons";
+import DeleteButton from "@/components/ui/delete-button";
 import { ApplicationStage } from "@prisma/client";
 
 const JOB_STATUS_STYLES: Record<
@@ -187,6 +188,22 @@ export default async function JobDetailPage({
                   <JobShareButtons
                     jobTitle={job.title}
                     wpPostUrl={job.wpPostUrl}
+                  />
+                </div>
+              )}
+
+              {role === "ADMIN" && (
+                <div className="pt-2 border-t border-white/[0.06]">
+                  <p className="text-[11px] text-zinc-600 mb-2">Danger Zone</p>
+                  <DeleteButton
+                    endpoint={`/api/jobs/${id}`}
+                    redirectTo="/jobs"
+                    label="Delete Job"
+                    confirmMessage={
+                      job.applications.length > 0
+                        ? `This job has ${job.applications.length} application(s). Remove all applications before deleting.`
+                        : "Are you sure you want to delete this job opening? This cannot be undone."
+                    }
                   />
                 </div>
               )}
