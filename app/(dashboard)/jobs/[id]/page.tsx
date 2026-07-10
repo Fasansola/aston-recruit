@@ -177,6 +177,7 @@ export default async function JobDetailPage({
                   <p className="text-[11px] text-zinc-600 mb-2">WordPress</p>
                   <WpPublishButton
                     jobId={job.id}
+                    currentWpPostId={job.wpPostId}
                     currentWpPostUrl={job.wpPostUrl}
                   />
                 </div>
