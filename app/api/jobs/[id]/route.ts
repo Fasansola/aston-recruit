@@ -120,23 +120,20 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const job = await prisma.jobOpening.findUnique({
-      where: { id },
-      select: { _count: { select: { applications: true } } },
-    });
+    const job = await prisma.jobOpening.findUnique({ where: { id } });
 
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    if (job._count.applications > 0) {
-      return NextResponse.json(
-        { error: "Cannot delete a job with existing applications. Remove all applications first." },
-        { status: 409 }
-      );
-    }
-
-    await prisma.jobOpening.delete({ where: { id } });
+    // Detach applications from this job before deleting so applicant records are preserved
+    await prisma.$transaction([
+      prisma.application.updateMany({
+        where: { jobOpeningId: id },
+        data: { jobOpeningId: null },
+      }),
+      prisma.jobOpening.delete({ where: { id } }),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -32,7 +32,7 @@ interface ApplicationRow {
   createdAt: Date;
   isDuplicate: boolean;
   applicant: { firstName: string; lastName: string; email: string };
-  jobOpening: { id: string; title: string };
+  jobOpening: { id: string; title: string } | null;
   aiEvaluation: { score: number; recommendation: string } | null;
 }
 
@@ -462,7 +462,7 @@ export default function BulkActionsTable({
                 </div>
 
                 <p className="text-sm text-zinc-400 truncate">
-                  {app.jobOpening.title}
+                  {app.jobOpening?.title ?? "Deleted job"}
                 </p>
 
                 <div>

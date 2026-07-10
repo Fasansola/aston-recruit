@@ -44,9 +44,9 @@ export async function scoreApplication(applicationId: string): Promise<void> {
     // 3. Build the prompt
     const userPrompt = `Evaluate this candidate for the following role.
 
-JOB TITLE: ${application.jobOpening.title}
-JOB REQUIREMENTS: ${application.jobOpening.requirements}
-JOB DESCRIPTION: ${application.jobOpening.description}
+JOB TITLE: ${application.jobOpening?.title ?? "Unknown"}
+JOB REQUIREMENTS: ${application.jobOpening?.requirements ?? ""}
+JOB DESCRIPTION: ${application.jobOpening?.description ?? ""}
 
 CANDIDATE CV:
 ${cvText}

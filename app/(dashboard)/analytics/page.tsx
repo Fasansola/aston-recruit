@@ -101,7 +101,7 @@ export default async function AnalyticsPage() {
     take: 5,
   });
 
-  const jobIds = jobCounts.map((j) => j.jobOpeningId);
+  const jobIds = jobCounts.map((j) => j.jobOpeningId).filter((id): id is string => id !== null);
   const jobDetails = await prisma.jobOpening.findMany({
     where: { id: { in: jobIds } },
     select: { id: true, title: true },
@@ -109,8 +109,8 @@ export default async function AnalyticsPage() {
   const jobDetailMap = Object.fromEntries(jobDetails.map((j) => [j.id, j]));
 
   const topJobs = jobCounts.map((j) => ({
-    id: j.jobOpeningId,
-    title: jobDetailMap[j.jobOpeningId]?.title ?? "Unknown",
+    id: j.jobOpeningId ?? "deleted",
+    title: j.jobOpeningId ? (jobDetailMap[j.jobOpeningId]?.title ?? "Deleted job") : "Deleted job",
     count: j._count._all,
   }));
 

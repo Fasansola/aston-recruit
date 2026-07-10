@@ -80,7 +80,7 @@ export async function sendStageEmail(
     }
 
     const { firstName } = application.applicant;
-    const jobTitle = application.jobOpening.title;
+    const jobTitle = application.jobOpening?.title ?? "the position";
 
     // 2. Render the correct template based on stage
     let html: string;
@@ -173,7 +173,7 @@ export async function sendStageEmailWithLog(
 
     sentTo = application.applicant.email;
     const { firstName } = application.applicant;
-    const jobTitle = application.jobOpening.title;
+    const jobTitle = application.jobOpening?.title ?? "the position";
 
     let html: string;
 

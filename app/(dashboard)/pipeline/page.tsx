@@ -230,7 +230,7 @@ export default async function PipelinePage() {
                           <div className="flex items-center gap-1.5 min-w-0">
                             <Briefcase className="h-3 w-3 text-zinc-600 shrink-0" />
                             <p className="text-xs text-zinc-400 truncate">
-                              {app.jobOpening.title}
+                              {app.jobOpening?.title ?? "Deleted job"}
                             </p>
                           </div>
                           <div className="flex items-center gap-1.5 min-w-0">

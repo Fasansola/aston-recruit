@@ -94,7 +94,7 @@ export default async function ApplicationDetailPage({
                   )}
                 </div>
                 <p className="text-zinc-500 text-sm mt-0.5">
-                  {jobOpening.title}
+                  {jobOpening?.title ?? "Deleted job"}
                 </p>
               </div>
               <StageBadge stage={application.currentStage as ApplicationStage} />
@@ -115,7 +115,7 @@ export default async function ApplicationDetailPage({
                   <Phone className="h-3.5 w-3.5" /> {applicant.phone}
                 </a>
               )}
-              {jobOpening.location && (
+              {jobOpening?.location && (
                 <span className="flex items-center gap-1.5 text-xs text-zinc-600">
                   <MapPin className="h-3.5 w-3.5" /> {jobOpening.location}
                 </span>
@@ -380,25 +380,27 @@ export default async function ApplicationDetailPage({
             </h3>
             <div>
               <p className="text-sm font-medium text-zinc-200">
-                {jobOpening.title}
+                {jobOpening?.title ?? "Deleted job"}
               </p>
-              {jobOpening.department && (
+              {jobOpening?.department && (
                 <p className="flex items-center gap-1.5 text-xs text-zinc-600 mt-1">
                   <Building2 className="h-3 w-3" /> {jobOpening.department}
                 </p>
               )}
-              {jobOpening.location && (
+              {jobOpening?.location && (
                 <p className="flex items-center gap-1.5 text-xs text-zinc-600 mt-1">
                   <MapPin className="h-3 w-3" /> {jobOpening.location}
                 </p>
               )}
             </div>
-            <Link
-              href={`/jobs/${jobOpening.id}`}
-              className="text-xs text-[#c9a84c] hover:text-[#b8952f] transition-colors"
-            >
-              View job opening →
-            </Link>
+            {jobOpening && (
+              <Link
+                href={`/jobs/${jobOpening.id}`}
+                className="text-xs text-[#c9a84c] hover:text-[#b8952f] transition-colors"
+              >
+                View job opening →
+              </Link>
+            )}
           </div>
         </div>
       </div>

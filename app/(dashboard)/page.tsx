@@ -102,7 +102,7 @@ export default async function DashboardPage() {
                     <p className="text-sm font-medium text-zinc-100 truncate">
                       {app.applicant.firstName} {app.applicant.lastName}
                     </p>
-                    <p className="text-xs text-zinc-500 truncate mt-0.5">{app.jobOpening.title}</p>
+                    <p className="text-xs text-zinc-500 truncate mt-0.5">{app.jobOpening?.title ?? "Deleted job"}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     {app.aiEvaluation && (

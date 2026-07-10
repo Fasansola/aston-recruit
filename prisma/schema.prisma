@@ -78,8 +78,8 @@ model Application {
   id              String           @id @default(cuid())
   applicantId     String
   applicant       Applicant        @relation(fields: [applicantId], references: [id])
-  jobOpeningId    String
-  jobOpening      JobOpening       @relation(fields: [jobOpeningId], references: [id])
+  jobOpeningId    String?
+  jobOpening      JobOpening?      @relation(fields: [jobOpeningId], references: [id])
   currentStage    ApplicationStage @default(APPLIED)
   cvUrl           String
   gdprConsent     Boolean          @default(false)

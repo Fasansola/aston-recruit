@@ -201,7 +201,7 @@ export default async function JobDetailPage({
                     label="Delete Job"
                     confirmMessage={
                       job.applications.length > 0
-                        ? `This job has ${job.applications.length} application(s). Remove all applications before deleting.`
+                        ? `This job has ${job.applications.length} application(s). They will be kept but unlinked from this job. Delete anyway?`
                         : "Are you sure you want to delete this job opening? This cannot be undone."
                     }
                   />
