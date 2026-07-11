@@ -40,24 +40,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate it's a PDF
-    if (file.type && file.type !== "application/pdf") {
-      return NextResponse.json(
-        { error: "Only PDF files are accepted" },
-        { status: 400 }
-      );
-    }
-
     // Build a unique filename
     const originalName =
-      file instanceof File ? file.name.replace(/[^a-zA-Z0-9._-]/g, "_") : "cv.pdf";
+      file instanceof File ? file.name.replace(/[^a-zA-Z0-9._-]/g, "_") : "document";
     const timestamp = Date.now();
     const filename = `cvs/${timestamp}_${originalName}`;
 
     // Upload to Vercel Blob (private store)
     const blob = await put(filename, file, {
       access: "private",
-      contentType: "application/pdf",
+      ...(file.type ? { contentType: file.type } : {}),
     });
 
     return NextResponse.json({ url: blob.url }, { status: 200 });
