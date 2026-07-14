@@ -126,8 +126,18 @@ export default function NewJobPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
+
+    // Validate select fields (HTML required doesn't cover shadcn Select)
+    if (!form.department.trim()) { setError("Department is required."); return; }
+    if (!form.location.trim()) { setError("Location is required."); return; }
+    if (!form.wages.trim()) { setError("Salary / Wages is required."); return; }
+    if (!form.jobType.trim()) { setError("Job Type is required."); return; }
+    if (!form.workType.trim()) { setError("Work Arrangement is required."); return; }
+    if (!form.closesAt.trim()) { setError("Closing date is required."); return; }
+    if (!form.shortDescription.trim()) { setError("Short Description is required."); return; }
+
+    setIsLoading(true);
     setWpWarning(null);
     setWpPostUrl(null);
     try {
@@ -220,21 +230,21 @@ export default function NewJobPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="department" className={labelClass}>Department</Label>
+              <Label htmlFor="department" className={labelClass}>Department <span className="text-[#c9a84c]">*</span></Label>
               <Input id="department" name="department" value={form.department} onChange={handleChange}
-                placeholder="e.g. Sales" className={inputClass} />
+                required placeholder="e.g. Sales" className={inputClass} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="location" className={labelClass}>Location</Label>
+              <Label htmlFor="location" className={labelClass}>Location <span className="text-[#c9a84c]">*</span></Label>
               <Input id="location" name="location" value={form.location} onChange={handleChange}
-                placeholder="e.g. Dubai, UAE" className={inputClass} />
+                required placeholder="e.g. Dubai, UAE" className={inputClass} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             {/* Salary — free text if WP field has no enum, otherwise a select */}
             <div className="space-y-1.5">
-              <Label htmlFor="wages" className={labelClass}>Salary / Wages</Label>
+              <Label htmlFor="wages" className={labelClass}>Salary / Wages <span className="text-[#c9a84c]">*</span></Label>
               {wpFields.wages.length > 0 ? (
                 <Select value={form.wages} onValueChange={(v) => setForm((p) => ({ ...p, wages: v ?? "" }))}>
                   <SelectTrigger className={inputClass}><SelectValue placeholder="Select…" /></SelectTrigger>
@@ -244,14 +254,14 @@ export default function NewJobPage() {
                 </Select>
               ) : (
                 <Input id="wages" name="wages" value={form.wages} onChange={handleChange}
-                  placeholder="e.g. Negotiable, AED 15,000/month" className={inputClass} />
+                  required placeholder="e.g. Negotiable, AED 15,000/month" className={inputClass} />
               )}
             </div>
 
             {/* Job Type — driven by WP ACF enum */}
             <div className="space-y-1.5">
               <Label className={labelClass}>
-                Job Type
+                Job Type <span className="text-[#c9a84c]">*</span>
                 {wpFields.job_type.length > 0 && <span className="ml-1 text-[10px] text-zinc-600">(from WordPress)</span>}
               </Label>
               <Select value={form.jobType} onValueChange={(v) => setForm((p) => ({ ...p, jobType: v ?? "" }))}>
@@ -270,7 +280,7 @@ export default function NewJobPage() {
             {/* Work Arrangement — driven by WP ACF enum */}
             <div className="space-y-1.5">
               <Label className={labelClass}>
-                Work Arrangement
+                Work Arrangement <span className="text-[#c9a84c]">*</span>
                 {wpFields.in_office__remote.length > 0 && <span className="ml-1 text-[10px] text-zinc-600">(from WordPress)</span>}
               </Label>
               <Select value={form.workType} onValueChange={(v) => setForm((p) => ({ ...p, workType: v ?? "" }))}>
@@ -284,9 +294,9 @@ export default function NewJobPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="closesAt" className={labelClass}>Closes At</Label>
+              <Label htmlFor="closesAt" className={labelClass}>Closes At <span className="text-[#c9a84c]">*</span></Label>
               <Input id="closesAt" name="closesAt" type="date" value={form.closesAt}
-                onChange={handleChange} className={inputClass} />
+                onChange={handleChange} required className={inputClass} />
             </div>
           </div>
 
@@ -365,11 +375,11 @@ export default function NewJobPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="shortDescription" className={labelClass}>
-              Short Description
+              Short Description <span className="text-[#c9a84c]">*</span>
               <span className="ml-2 text-zinc-600 font-normal">— shown on listing cards (auto-filled by AI)</span>
             </Label>
             <Textarea id="shortDescription" name="shortDescription" value={form.shortDescription}
-              onChange={handleChange} rows={2}
+              onChange={handleChange} required rows={2}
               placeholder="1-2 sentence summary shown on the job listing card on the website…"
               className="bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 text-sm resize-none" />
           </div>
