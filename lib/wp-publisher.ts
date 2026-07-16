@@ -172,21 +172,18 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
     },
   };
 
-  // ── Custom token endpoint (bypasses WP capability checks) ─────────────────
-  if (WORDPRESS_CAREER_TOKEN) {
-    const customBase = `${baseUrl}/wp-json/aston/v1/career`;
-    // PATCH existing post, or POST to create a new one
-    const url = isUpdate ? `${customBase}/${job.existingWpPostId}` : customBase;
-    const method = isUpdate ? "PATCH" : "POST";
-
+  async function wpFetch(url: string, method: string, headers: Record<string, string>): Promise<WpPublishResult> {
     const response = await fetch(url, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        "X-Aston-Token": WORDPRESS_CAREER_TOKEN,
-      },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(requestBody),
     });
+
+    // If we tried to PATCH a post that no longer exists on WP, create a new one
+    if (response.status === 404 && method === "PATCH") {
+      const createUrl = url.replace(/\/\d+$/, "");
+      return wpFetch(createUrl, "POST", headers);
+    }
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "(no body)");
@@ -197,6 +194,13 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
     return { wpPostId: data.id, wpPostUrl: data.link };
   }
 
+  // ── Custom token endpoint (bypasses WP capability checks) ─────────────────
+  if (WORDPRESS_CAREER_TOKEN) {
+    const customBase = `${baseUrl}/wp-json/aston/v1/career`;
+    const url = isUpdate ? `${customBase}/${job.existingWpPostId}` : customBase;
+    return wpFetch(url, isUpdate ? "PATCH" : "POST", { "X-Aston-Token": WORDPRESS_CAREER_TOKEN });
+  }
+
   // ── Fallback: standard WP REST API with Basic Auth ────────────────────────
   if (!credentials) {
     throw new Error(
@@ -204,26 +208,6 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
     );
   }
 
-  // PATCH existing post, or POST to create a new one
-  const url = isUpdate
-    ? `${wpV2Endpoint}/${job.existingWpPostId}`
-    : wpV2Endpoint;
-  const method = isUpdate ? "PATCH" : "POST";
-
-  const response = await fetch(url, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Basic ${credentials}`,
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "(no body)");
-    throw new Error(`WordPress API returned ${response.status}: ${errorText}`);
-  }
-
-  const data = (await response.json()) as { id: number; link: string };
-  return { wpPostId: data.id, wpPostUrl: data.link };
+  const url = isUpdate ? `${wpV2Endpoint}/${job.existingWpPostId}` : wpV2Endpoint;
+  return wpFetch(url, isUpdate ? "PATCH" : "POST", { Authorization: `Basic ${credentials}` });
 }
