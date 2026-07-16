@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { marked } from "marked";
 import { ArrowLeft, MapPin, Building2, Calendar, Pencil } from "lucide-react";
 import CopyableId from "@/components/ui/copyable-id";
 import StageBadge from "@/components/applications/stage-badge";
@@ -129,18 +130,20 @@ export default async function JobDetailPage({
             <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
               Description
             </h3>
-            <p className="text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed">
-              {job.description}
-            </p>
+            <div
+              className="prose prose-sm prose-invert max-w-none prose-headings:text-zinc-200 prose-p:text-zinc-300 prose-strong:text-zinc-100 prose-ul:text-zinc-300 prose-ol:text-zinc-300 prose-li:marker:text-zinc-500 prose-code:text-[#c9a84c] prose-code:bg-white/[0.06] prose-code:px-1 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-blockquote:border-l-[#c9a84c]/40 prose-blockquote:text-zinc-400 prose-a:text-[#c9a84c] prose-hr:border-white/[0.08]"
+              dangerouslySetInnerHTML={{ __html: marked.parse(job.description) as string }}
+            />
           </div>
 
           <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-6">
             <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">
               Requirements
             </h3>
-            <p className="text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed">
-              {job.requirements}
-            </p>
+            <div
+              className="prose prose-sm prose-invert max-w-none prose-headings:text-zinc-200 prose-p:text-zinc-300 prose-strong:text-zinc-100 prose-ul:text-zinc-300 prose-ol:text-zinc-300 prose-li:marker:text-zinc-500 prose-code:text-[#c9a84c] prose-code:bg-white/[0.06] prose-code:px-1 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-blockquote:border-l-[#c9a84c]/40 prose-blockquote:text-zinc-400 prose-a:text-[#c9a84c] prose-hr:border-white/[0.08]"
+              dangerouslySetInnerHTML={{ __html: marked.parse(job.requirements) as string }}
+            />
           </div>
         </div>
 

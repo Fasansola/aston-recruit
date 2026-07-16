@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Loader2, Copy, Check, RefreshCw, Sparkles, Globe, ExternalLink, AlertCircle } from "lucide-react";
+import MarkdownEditor from "@/components/ui/markdown-editor";
 import type { WpFieldOptions } from "@/app/api/jobs/wp-fields/route";
 import Link from "next/link";
 
@@ -373,36 +373,38 @@ export default function NewJobPage() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="shortDescription" className={labelClass}>
-              Short Description <span className="text-[#c9a84c]">*</span>
-              <span className="ml-2 text-zinc-600 font-normal">— shown on listing cards (auto-filled by AI)</span>
-            </Label>
-            <Textarea id="shortDescription" name="shortDescription" value={form.shortDescription}
-              onChange={handleChange} required rows={2}
-              placeholder="1-2 sentence summary shown on the job listing card on the website…"
-              className="bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 text-sm resize-none" />
-          </div>
+          <MarkdownEditor
+            id="shortDescription"
+            name="shortDescription"
+            label={<>Short Description <span className="text-[#c9a84c]">*</span><span className="ml-2 text-zinc-600 font-normal">— shown on listing cards</span></>}
+            value={form.shortDescription}
+            onChange={handleChange}
+            required
+            rows={2}
+            placeholder="1-2 sentence summary shown on the job listing card on the website…"
+          />
 
-          <div className="space-y-1.5">
-            <Label htmlFor="description" className={labelClass}>
-              Job Description <span className="text-[#c9a84c]">*</span>
-            </Label>
-            <Textarea id="description" name="description" value={form.description}
-              onChange={handleChange} required rows={6}
-              placeholder="Describe the role, responsibilities, and what the candidate will be doing…"
-              className="bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 text-sm resize-none" />
-          </div>
+          <MarkdownEditor
+            id="description"
+            name="description"
+            label={<>Job Description <span className="text-[#c9a84c]">*</span></>}
+            value={form.description}
+            onChange={handleChange}
+            required
+            rows={8}
+            placeholder="Describe the role, responsibilities, and what the candidate will be doing…"
+          />
 
-          <div className="space-y-1.5">
-            <Label htmlFor="requirements" className={labelClass}>
-              Requirements <span className="text-[#c9a84c]">*</span>
-            </Label>
-            <Textarea id="requirements" name="requirements" value={form.requirements}
-              onChange={handleChange} required rows={6}
-              placeholder="List the skills, experience, and qualifications required…"
-              className="bg-[#0d0d0d] border-white/[0.08] text-zinc-200 placeholder:text-zinc-700 focus:border-[#c9a84c]/50 text-sm resize-none" />
-          </div>
+          <MarkdownEditor
+            id="requirements"
+            name="requirements"
+            label={<>Requirements <span className="text-[#c9a84c]">*</span></>}
+            value={form.requirements}
+            onChange={handleChange}
+            required
+            rows={8}
+            placeholder="List the skills, experience, and qualifications required…"
+          />
         </div>
 
         {/* WordPress publish toggle */}

@@ -1,21 +1,8 @@
 /**
  * WordPress REST API publisher for the Aston VIP career CPT.
- *
- * The career post type on aston.ae uses no ACF fields — all job content
- * lives in the standard Gutenberg `content` field. This publisher formats
- * the description and requirements as proper Gutenberg block HTML so the
- * published post matches the look and feel of manually created posts.
- *
- * Requirements on the WordPress side:
- *  - The "career" CPT must be registered with `show_in_rest: true`
- *  - An Application Password must be generated for a WP admin user
- *    (WP Admin → Users → your user → Application Passwords)
- *
- * Environment variables required:
- *  WORDPRESS_URL          e.g. https://aston.ae
- *  WORDPRESS_USERNAME     WP admin username
- *  WORDPRESS_APP_PASSWORD Application Password from WP admin
  */
+
+import { marked } from "marked";
 
 export interface WpPublishResult {
   wpPostId: number;
@@ -24,8 +11,8 @@ export interface WpPublishResult {
 
 export interface JobData {
   title: string;
-  description: string;      // plain text, paragraphs separated by \n\n
-  requirements: string;     // plain text, bullets starting with • or -
+  description: string;      // Markdown
+  requirements: string;     // Markdown
   shortDescription?: string | null; // ACF: short_description
   department?: string | null;
   location?: string | null;         // ACF: job_location
@@ -36,42 +23,24 @@ export interface JobData {
   wpJobOpeningId: string;           // ACF: zoho_opening_id (reused for Elementor hidden field)
 }
 
-/**
- * Wraps a plain-text paragraph in a Gutenberg paragraph block.
- */
-function gutenbergParagraph(text: string): string {
-  const escaped = text.replace(/\n/g, "<br>");
-  return `<!-- wp:paragraph -->\n<p class="wp-block-paragraph">${escaped}</p>\n<!-- /wp:paragraph -->`;
-}
-
-/**
- * Wraps a heading string in a Gutenberg heading block.
- */
 function gutenbergHeading(text: string, level: 3 | 4 = 3): string {
   const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return `<!-- wp:heading {"level":${level}} -->\n<h${level} class="wp-block-heading" id="h-${id}">${text}</h${level}>\n<!-- /wp:heading -->`;
 }
 
-/**
- * Wraps an array of plain-text items in a Gutenberg list block.
- */
-function gutenbergList(items: string[]): string {
-  const liItems = items.map((item) => `<li>${item.trim()}</li>`).join("\n\n\n\n");
-  return `<!-- wp:list -->\n<ul class="wp-block-list">\n${liItems}\n</ul>\n<!-- /wp:list -->`;
+/** Wraps an HTML string in a Gutenberg freeform HTML block. */
+function gutenbergHtml(html: string): string {
+  return `<!-- wp:html -->\n${html}\n<!-- /wp:html -->`;
+}
+
+function gutenbergParagraph(text: string): string {
+  return `<!-- wp:paragraph -->\n<p class="wp-block-paragraph">${text}</p>\n<!-- /wp:paragraph -->`;
 }
 
 /**
- * Converts plain-text job content into Gutenberg block HTML that matches
- * the structure of existing career posts on aston.ae.
- *
- * Output structure:
- *   [intro paragraphs from description]
- *   ## What you will do
- *   [bullet list parsed from description — lines after "responsibilities" marker]
- *   ## What you need for this
- *   [bullet list from requirements]
- *   ## What we offer
- *   [closing paragraph about Aston VIP]
+ * Converts Markdown job content into Gutenberg block HTML.
+ * Description and requirements are rendered from Markdown → HTML and
+ * embedded as freeform HTML blocks so all formatting is preserved.
  */
 function buildGutenbergContent(
   description: string,
@@ -79,47 +48,14 @@ function buildGutenbergContent(
 ): string {
   const blocks: string[] = [];
 
-  // ── Description ────────────────────────────────────────────────────────
-  // Split description into paragraphs; lines starting with • or - become
-  // a "What you will do" list; everything else is intro paragraphs.
-  const descLines = description.split(/\n+/);
-  const introParagraphs: string[] = [];
-  const responsibilityItems: string[] = [];
+  const descHtml = marked.parse(description) as string;
+  blocks.push(gutenbergHeading("What you will do", 3));
+  blocks.push(gutenbergHtml(descHtml));
 
-  for (const line of descLines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (/^[•\-]/.test(trimmed)) {
-      responsibilityItems.push(trimmed.replace(/^[•\-]\s*/, ""));
-    } else {
-      introParagraphs.push(trimmed);
-    }
-  }
+  const reqHtml = marked.parse(requirements) as string;
+  blocks.push(gutenbergHeading("What you need for this", 3));
+  blocks.push(gutenbergHtml(reqHtml));
 
-  // Intro paragraphs
-  for (const para of introParagraphs) {
-    blocks.push(gutenbergParagraph(para));
-  }
-
-  // "What you will do" section (only if there are responsibility bullets)
-  if (responsibilityItems.length > 0) {
-    blocks.push(gutenbergHeading("What you will do", 3));
-    blocks.push(gutenbergList(responsibilityItems));
-  }
-
-  // ── Requirements ───────────────────────────────────────────────────────
-  const reqItems = requirements
-    .split(/\n+/)
-    .map((l) => l.trim())
-    .filter((l) => l)
-    .map((l) => l.replace(/^[•\-]\s*/, ""));
-
-  if (reqItems.length > 0) {
-    blocks.push(gutenbergHeading("What you need for this", 3));
-    blocks.push(gutenbergList(reqItems));
-  }
-
-  // ── What we offer (standard Aston VIP closing) ─────────────────────────
   blocks.push(gutenbergHeading("What we offer", 4));
   blocks.push(
     gutenbergParagraph(
