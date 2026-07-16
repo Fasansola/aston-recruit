@@ -13,14 +13,16 @@ export interface JobData {
   title: string;
   description: string;      // Markdown
   requirements: string;     // Markdown
-  shortDescription?: string | null; // ACF: short_description
+  shortDescription?: string | null;
   department?: string | null;
-  location?: string | null;         // ACF: job_location
-  wages?: string | null;            // ACF: wages
-  workType?: string | null;         // ACF: in_office__remote
-  jobType?: string | null;          // ACF: job_type
+  location?: string | null;
+  wages?: string | null;
+  workType?: string | null;
+  jobType?: string | null;
   closesAt?: Date | null;
-  wpJobOpeningId: string;           // ACF: zoho_opening_id (reused for Elementor hidden field)
+  wpJobOpeningId: string;
+  /** If set, PATCH the existing WP post instead of creating a new one. */
+  existingWpPostId?: number | null;
 }
 
 function gutenbergHeading(text: string, level: 3 | 4 = 3): string {
@@ -145,8 +147,8 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
   }
 
   const baseUrl = WORDPRESS_URL.replace(/\/$/, "");
+  const isUpdate = !!job.existingWpPostId;
 
-  // ── ACF enum fetch (still uses standard WP REST OPTIONS — no auth needed) ──
   const wpV2Endpoint = `${baseUrl}/wp-json/wp/v2/career`;
   const credentials =
     WORDPRESS_USERNAME && WORDPRESS_APP_PASSWORD
@@ -158,10 +160,8 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
 
   const requestBody = {
     title: job.title,
-    content: buildGutenbergContent(
-      job.description,
-      job.requirements
-    ),
+    content: buildGutenbergContent(job.description, job.requirements),
+    status: "publish",
     acf: {
       zoho_opening_id: job.wpJobOpeningId,
       short_description: job.shortDescription ?? "",
@@ -172,12 +172,15 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
     },
   };
 
-  // ── Prefer the custom token endpoint (bypasses WP capability checks) ──────
-  // Falls back to the standard WP REST API with Basic Auth if no token is set.
+  // ── Custom token endpoint (bypasses WP capability checks) ─────────────────
   if (WORDPRESS_CAREER_TOKEN) {
-    const customEndpoint = `${baseUrl}/wp-json/aston/v1/career`;
-    const response = await fetch(customEndpoint, {
-      method: "POST",
+    const customBase = `${baseUrl}/wp-json/aston/v1/career`;
+    // PATCH existing post, or POST to create a new one
+    const url = isUpdate ? `${customBase}/${job.existingWpPostId}` : customBase;
+    const method = isUpdate ? "PATCH" : "POST";
+
+    const response = await fetch(url, {
+      method,
       headers: {
         "Content-Type": "application/json",
         "X-Aston-Token": WORDPRESS_CAREER_TOKEN,
@@ -201,13 +204,19 @@ export async function publishJobToWordPress(job: JobData): Promise<WpPublishResu
     );
   }
 
-  const response = await fetch(wpV2Endpoint, {
-    method: "POST",
+  // PATCH existing post, or POST to create a new one
+  const url = isUpdate
+    ? `${wpV2Endpoint}/${job.existingWpPostId}`
+    : wpV2Endpoint;
+  const method = isUpdate ? "PATCH" : "POST";
+
+  const response = await fetch(url, {
+    method,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Basic ${credentials}`,
     },
-    body: JSON.stringify({ ...requestBody, status: "publish" }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {

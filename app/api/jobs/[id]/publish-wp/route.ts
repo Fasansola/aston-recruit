@@ -43,6 +43,7 @@ export async function POST(
       jobType: job.jobType,
       closesAt: job.closesAt,
       wpJobOpeningId: job.wpJobOpeningId,
+      existingWpPostId: job.wpPostId, // PATCH if already published, POST otherwise
     });
 
     // Persist the WP post reference on the job record
