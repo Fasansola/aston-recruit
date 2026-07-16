@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Globe, Loader2, ExternalLink, RefreshCw, EyeOff } from "lucide-react";
 
@@ -28,6 +28,21 @@ export default function WpPublishButton({
   const [publishedUrl, setPublishedUrl] = useState<string | null>(currentWpPostUrl ?? null);
   const [loading, setLoading] = useState<"publish" | "unlist" | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Silently sync the URL from WP on mount in case the slug changed on the WP side
+  useEffect(() => {
+    if (state !== "published") return;
+    fetch(`/api/jobs/${jobId}/sync-wp`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.synced && data.wpPostUrl && data.wpPostUrl !== publishedUrl) {
+          setPublishedUrl(data.wpPostUrl);
+          router.refresh();
+        }
+      })
+      .catch(() => {}); // silently ignore — stale URL is non-critical
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handlePublish() {
     setLoading("publish");
